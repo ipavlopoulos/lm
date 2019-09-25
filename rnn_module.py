@@ -32,11 +32,6 @@ from absl import flags
 from absl import logging
 from absl import app
 
-FLAGS = flags.FLAGS
-flags.DEFINE_string("datafile", None, "Data to train (train+val+dev).")
-flags.DEFINE_string("txt_col_name", "TEXT", "The name of the column storing the TEXT.")
-flags.DEFINE_string("lbl_col_name", "LABEL", "The name of the column storing the LABEL.")
-
 def preprocess(text, start="_start_", end="_end_", sentence_token="_sentence_token_"):
 	if sentence_token is not None:
 		sentences = nltk.tokenize.sent_tokenize(text)
@@ -87,6 +82,10 @@ def prepare_data(corpus, split=0.8):
 	return train_data, val_data, dev_data
 
 def main(argv):
+	FLAGS = flags.FLAGS
+	flags.DEFINE_string("datafile", None, "Data to train (train+val+dev).")
+	flags.DEFINE_string("txt_col_name", "TEXT", "The name of the column storing the TEXT.")
+	flags.DEFINE_string("lbl_col_name", "LABEL", "The name of the column storing the LABEL.")
 	logging.info(f"Training RNN on {FLAGS.datafile}")
 	train_pd, val_pd, dev_pd = read_data(FLAGS.datafile)
 	tokenizer = set_tokenizer(train_pd, FLAGS.txt_col_name)
