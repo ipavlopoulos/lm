@@ -37,16 +37,6 @@ flags.DEFINE_string("datafile", None, "Data to train (train+val+dev).")
 flags.DEFINE_string("txt_col_name", "TEXT", "The name of the column storing the TEXT.")
 flags.DEFINE_string("lbl_col_name", "LABEL", "The name of the column storing the LABEL.")
 
-def prepare_date(corpus, split=0.8):
-	# shuffle
-	#data = data.sample(frac=1).reset_index(drop=True)
-	data = shuffle(corpus)
-	train_data = data[:int(split*data.shape[0])]
-	eval_data = data[int(split*data.shape[0]):]
-	val_data = eval_data[:int(0.5*eval_data.shape[0])] 
-	dev_data = eval_data[int(0.5*eval_data.shape[0]):]
-	return train_data, val_data, dev_data
-
 def preprocess(text, start="_start_", end="_end_", sentence_token="_sentence_token_"):
 	if sentence_token is not None:
 		sentences = nltk.tokenize.sent_tokenize(text)
@@ -76,20 +66,30 @@ def word_for_id(integer, tokenizer):
 			return word
 	return None
 
-def read_data():
-   corpus = pd.read_csv(FLAGS.datafile)
-   train_pd, val_pd, dev_pd = prepare_date(corpus)
+def read_data(csv_path):
+   corpus = pd.read_csv(csv_path)
+   train_pd, val_pd, dev_pd = prepare_data(corpus)
    return train_pd, val_pd, dev_pd
 
-def set_tokenizer(corpus):
+def set_tokenizer(corpus, txtname="TEXT"):
    tokenizer = Tokenizer()
-   tokenizer.fit_on_texts(corpus[FLAGS.txt_col_name].to_numpy())
+   tokenizer.fit_on_texts(corpus[txtname].to_numpy())
    return tokenizer
+
+def prepare_data(corpus, split=0.8):
+	# shuffle
+	#data = data.sample(frac=1).reset_index(drop=True)
+	data = shuffle(corpus)
+	train_data = data[:int(split*data.shape[0])]
+	eval_data = data[int(split*data.shape[0]):]
+	val_data = eval_data[:int(0.5*eval_data.shape[0])] 
+	dev_data = eval_data[int(0.5*eval_data.shape[0]):]
+	return train_data, val_data, dev_data
 
 def main(argv):
    logging.info(f"Training RNN on {FLAGS.datafile}")
-   train_pd, val_pd, dev_pd = read_data()
-   tokenizer = set_tokenizer(train_pd)
+   train_pd, val_pd, dev_pd = read_data(FLAGS.datafile)
+   tokenizer = set_tokenizer(train_pd, FLAGS.txt_col_name)
    vocab_size = len(tokenizer.word_index) + 1
    print('Vocabulary Size: %d' % vocab_size)
    # define the experiment
