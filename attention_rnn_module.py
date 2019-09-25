@@ -41,7 +41,7 @@ def preprocess(text, start="_start_", end="_end_", sentence_token="_sentence_tok
 	return text
 
 # define the captioning model
-def define_model(vocab_size, rnn_dimension=128, max_length, loss="binary_crossentropy", attention_layers=[128,128,128]):
+def define_model(vocab_size, max_length, rnn_dimension=128, loss="binary_crossentropy", attention_layers=[128,128,128]):
 	# embedding
 	inputs = Input(shape=(max_length,))
 	emb = Embedding(vocab_size, 200, mask_zero=True)(inputs)
