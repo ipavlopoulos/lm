@@ -45,7 +45,7 @@ def define_model(vocab_size, max_length, rnn_dimension=128, loss="binary_crossen
 	# embedding
 	inputs = Input(shape=(max_length,))
 	emb = Embedding(vocab_size, 200, mask_zero=True)(inputs)
-	rnn = GRU(dimension, return_sequences=True)(emb)  
+	rnn = GRU(rnn_dimension, return_sequences=True)(emb)  
 	# StartOf ATTENTION
 	for i,dim in enumerate(attention_layers):
 		att = keras.layers.wrappers.TimeDistributed(Dense(dim, activation='relu'))(rnn if i==0 else att)
