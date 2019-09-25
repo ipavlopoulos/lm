@@ -67,14 +67,14 @@ def word_for_id(integer, tokenizer):
 	return None
 
 def read_data(csv_path):
-   corpus = pd.read_csv(csv_path)
-   train_pd, val_pd, dev_pd = prepare_data(corpus)
-   return train_pd, val_pd, dev_pd
+	corpus = pd.read_csv(csv_path)
+	train_pd, val_pd, dev_pd = prepare_data(corpus)
+	return train_pd, val_pd, dev_pd
 
 def set_tokenizer(corpus, txtname="TEXT"):
-   tokenizer = Tokenizer()
-   tokenizer.fit_on_texts(corpus[txtname].to_numpy())
-   return tokenizer
+	tokenizer = Tokenizer()
+	tokenizer.fit_on_texts(corpus[txtname].to_numpy())
+	return tokenizer
 
 def prepare_data(corpus, split=0.8):
 	# shuffle
@@ -87,20 +87,20 @@ def prepare_data(corpus, split=0.8):
 	return train_data, val_data, dev_data
 
 def main(argv):
-   logging.info(f"Training RNN on {FLAGS.datafile}")
-   train_pd, val_pd, dev_pd = read_data(FLAGS.datafile)
-   tokenizer = set_tokenizer(train_pd, FLAGS.txt_col_name)
-   vocab_size = len(tokenizer.word_index) + 1
-   print('Vocabulary Size: %d' % vocab_size)
-   # define the experiment
-   verbose, batch_size, n_epochs, max_length = 1, 128, 100, 512
-   model_name = f'rnn.e{n_epochs}.len{max_length}'
-   rnn_model = define_model(vocab_size, max_length)
-   # prepare the dataset
-   X, Y = tokenizer.texts_to_sequences(train_pd[FLAGS.txt_col_name].to_numpy()), train_pd[FLAGS.lbl_col_name].to_numpy()
-   VX, VY = tokenizer.texts_to_sequences(dev_pd[FLAGS.txt_col_name].to_numpy()), dev_pd[FLAGS.lbl_col_name].to_numpy()
-   X, VX = sequence.pad_sequences(X, maxlen=max_length), sequence.pad_sequences(VX, maxlen=max_length) # padding
-   rnn_model.fit(X,Y,validation_data=(VX, VY), epochs=n_epochs, batch_size=batch_size, verbose=verbose)
+	logging.info(f"Training RNN on {FLAGS.datafile}")
+	train_pd, val_pd, dev_pd = read_data(FLAGS.datafile)
+	tokenizer = set_tokenizer(train_pd, FLAGS.txt_col_name)
+	vocab_size = len(tokenizer.word_index) + 1
+	print('Vocabulary Size: %d' % vocab_size)
+	# define the experiment
+	verbose, batch_size, n_epochs, max_length = 1, 128, 100, 512
+	model_name = f'rnn.e{n_epochs}.len{max_length}'
+	rnn_model = define_model(vocab_size, max_length)
+	# prepare the dataset
+	X, Y = tokenizer.texts_to_sequences(train_pd[FLAGS.txt_col_name].to_numpy()), train_pd[FLAGS.lbl_col_name].to_numpy()
+	VX, VY = tokenizer.texts_to_sequences(dev_pd[FLAGS.txt_col_name].to_numpy()), dev_pd[FLAGS.lbl_col_name].to_numpy()
+	X, VX = sequence.pad_sequences(X, maxlen=max_length), sequence.pad_sequences(VX, maxlen=max_length) # padding
+	rnn_model.fit(X,Y,validation_data=(VX, VY), epochs=n_epochs, batch_size=batch_size, verbose=verbose)
 
 if __name__ == "__main__": 
 	app.run(main)
