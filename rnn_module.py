@@ -99,7 +99,8 @@ def main(argv):
 	X, Y = tokenizer.texts_to_sequences(train_pd[FLAGS.txt_col_name].to_numpy()), train_pd[FLAGS.lbl_col_name].to_numpy()
 	VX, VY = tokenizer.texts_to_sequences(dev_pd[FLAGS.txt_col_name].to_numpy()), dev_pd[FLAGS.lbl_col_name].to_numpy()
 	X, VX = sequence.pad_sequences(X, maxlen=max_length), sequence.pad_sequences(VX, maxlen=max_length) # padding
-	rnn_model.fit(X,Y,validation_data=(VX, VY), epochs=n_epochs, batch_size=batch_size, verbose=verbose)
+	early = keras.callbacks.EarlyStopping(monitor='val_acc', min_delta=0.001, patience=3, verbose=1, mode='auto', restore_best_weights=True)
+	model.fit(X,Y,validation_data=(VX, VY), epochs=n_epochs, batch_size=batch_size, verbose=verbose, callbacks=[early])
 
 if __name__ == "__main__": 
 	app.run(main)
