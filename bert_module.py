@@ -6,7 +6,6 @@ import tensorflow_hub as hub
 from datetime import datetime
 from sklearn.metrics import roc_auc_score
 from tensorflow.keras import backend as K
-!pip install bert-tensorflow
 import bert
 from bert import run_classifier
 from bert import optimization
