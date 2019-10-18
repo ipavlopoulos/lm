@@ -1,7 +1,7 @@
 # lm
 Language Modelling (LM) modules
 
-# Load the `dataset'. Assuming that the dataset is in Pandas format and has a "TEXT" and a "LABEL" label.
+### Load the `dataset'. Assuming that the dataset is in Pandas format and has a "TEXT" and a "LABEL" label.
 git clone https://github.com/ipavlopoulos/lm.git
 
 from lm import attention_rnn_module as RNN, rnn_module as RNN
