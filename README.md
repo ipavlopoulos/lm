@@ -7,7 +7,7 @@ git clone https://github.com/ipavlopoulos/lm.git
 ```
 Let's assume you have a pandas load with data, including the labels "TEXT" (raw) and "LABEL" (0/1). Then, it goes like this:
 ```python
-from lm import attention_rnn_module as RNN, rnn_module as RNN
+from lm rnn_module as RNN
 import keras
 train_pd, val_pd, dev_pd = RNN.prepare_data(dataset_pd)
 tokenizer = RNN.Tokenizer()
