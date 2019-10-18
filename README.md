@@ -2,7 +2,7 @@
 Language Modelling (LM) modules
 
 # How to
-```
+```python
 git clone https://github.com/ipavlopoulos/lm.git
 ```
 Let's assume you have a pandas load with data, including the labels "TEXT" (raw) and "LABEL" (0/1). Then, it goes like this:
