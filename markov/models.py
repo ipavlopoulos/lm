@@ -2,6 +2,8 @@ from collections import *
 import numpy as np
 import random
 
+CHARACTER = "CHAR"
+WORD = "WORD"
 
 def normalize(next_grams_counter):
     """
@@ -19,17 +21,17 @@ class LM:
     A language model using n-grams.
     """
 
-    def __init__(self, n=4, gram="CHAR"):
-        assert gram in {"CHAR", "WORD"}
+    def __init__(self, n=4, gram=CHARACTER):
+        assert gram in {CHARACTER, WORD}
         self.gram = gram
         self.n = n
         self.model = {}
         self.vocabulary = {}
 
     def pad(self):
-        if self.gram == "CHAR":
+        if self.gram == CHARACTER:
             return self.n * "~"
-        elif self.gram == "WORD":
+        elif self.gram == WORD:
             return self.n * ["~"]
         else:
             raise NotImplemented
@@ -37,10 +39,10 @@ class LM:
     def stringify(self, ngram):
         # If the model is character-based,
         # the ngram is already both a text and a list.
-        if self.gram == "CHAR":
+        if self.gram == CHARACTER:
             return ngram
         # If it is word based, join the n words.
-        elif self.gram == "WORD":
+        elif self.gram == WORD:
             return " ".join(ngram)
 
     def train(self, corpus):
@@ -97,19 +99,6 @@ class LM:
             history = self.stringify(history[-self.n:]) + next_gram
         return probs
 
-    def bpc(self, text):
-        """
-        Bits Per Character,
-            or the negative mean log prob of the text characters.
-        :param text: The text to compute BPC for.
-        :return: A float number, the lower the better.
-        """
-        # Get the character probabilities
-        probs = self.compute_gram_probs(text)
-        # Turn to bits and return bits per character
-        log_probs = list(map(np.log2, probs))
-        return -np.mean(log_probs)
-
     def get_next_grams(self, ngram):
         ngram = self.stringify(ngram)
         if ngram in self.model:
@@ -150,9 +139,32 @@ class LM:
             next_gram = self.generate_next_gram(history)
             out.append(next_gram)
             # Update the history with the gram (or [gram] in word-models)
-            if self.gram == "WORD":
+            if self.gram == WORD:
                 history = history[-self.n:] + [next_gram]
             else:
                 history = history[-self.n:] + next_gram
-        sep = " " if self.gram == "WORD" else ""
+        sep = " " if self.gram == WORD else ""
         return sep.join(out)
+
+    def bpg(self, text):
+        """
+        EVALUATION (mainly for character-based models)
+        Cross Entropy or Bits Per Gram is the negative mean log prob of the grams.
+        :param text: The text to compute BPG for.
+        :return: A float number, the lower the better.
+        """
+        # Get the character probabilities
+        probs = self.compute_gram_probs(text)
+        # Turn to bits and return bits per character
+        log_probs = list(map(np.log2, probs))
+        return -np.mean(log_probs)
+
+    def ppl(self, text):
+        """
+        EVALUATION (mainly for word-based models)
+        Perplexity of a text for the given model.
+        That is 2 ^ cross_entropy(text). Bits per gram here is cross entropy.
+        :param text:
+        :return:
+        """
+        return np.power(2, self.bpg(text))
