@@ -1,7 +1,7 @@
 # lm
 Language Modelling (LM) modules.
 
-# Character-based N-Gram model.
+### Character-based N-Gram model.
 * Uses N-Gram statistics to generate the next character.
 * It includes a Bits Per Character implementation for evaluation.
 ```python
@@ -12,7 +12,7 @@ Language Modelling (LM) modules.
 >>> cml.bpg('this an example this is an example')
 0.058823529411764705
 ```
-# Word-based N-Gram model.
+### Word-based N-Gram model.
 * Uses N-Gram statistics to generate the next word.
 * It includes a Perplexity implementation for evaluation.
 ```python
@@ -24,4 +24,6 @@ Language Modelling (LM) modules.
 29.897352853986263
 ```
 
-And a Neural package which is still experimental.
+### Following...
+* Neural Language Modeling (experimental implementation included)
+* Text Classification
