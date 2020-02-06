@@ -5,6 +5,7 @@ import random
 CHARACTER = "CHAR"
 WORD = "WORD"
 
+
 def normalize(next_grams_counter):
     """
     For a given n-gram, divide the frequency of each next gram with
