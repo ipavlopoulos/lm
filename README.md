@@ -20,7 +20,7 @@ Language Modelling (LM) modules.
 >>> wlm = LM(gram="WORD").train(["this", "is", "an", "example", "this", "an"])
 >>> wlm.generate_text()
 'this is an example this an example this example is is this this...'
->>> wlm.cross_entropy("this is an example")
+>>> wlm.ppl("this is an example")
 29.897352853986263
 ```
 
