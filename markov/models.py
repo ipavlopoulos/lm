@@ -68,22 +68,22 @@ class LM:
         self.model = {hist: normalize(next_grams) for hist, next_grams in lm.items()}
         return self
 
-    def compute_gram_probs(self, text):
+    def compute_gram_probs(self, grams):
         """
         The probabilities of the grams.
         Computed from the statistics observed during training.
-        :param text: The text to compute the probabilities.
+        :param grams: The text to compute the probabilities.
         :return: A list of probabilities, each in [0,1]
         """
         # The beginning of the text
         history = self.pad()
         probs = []
         # Parse all text grams
-        for i in range(len(text)):
+        for i in range(len(grams)):
             # Get the preceding n chars
             past_ngram = self.stringify(history[-self.n:])
-            # Get the next char
-            next_gram = text[i]
+            # Get the next gram
+            next_gram = grams[i]
             # If the history is unknown, assign zero probability (near zero to make log work)
             if past_ngram not in self.model:
                 prob = 10e-10
@@ -147,10 +147,11 @@ class LM:
         sep = " " if self.gram == WORD else ""
         return sep.join(out)
 
-    def bpg(self, text):
+    def cross_entropy(self, text):
         """
-        EVALUATION (mainly for character-based models)
-        Cross Entropy or Bits Per Gram is the negative mean log prob of the grams.
+        Cross Entropy (aka Bits Per Character or BPC for characters).
+        This is the negative mean log prob of the words/characters.
+        To get the Perplexity (PPL) compute: np.power(2, self.cross_entropy(text)).
         :param text: The text to compute BPG for.
         :return: A float number, the lower the better.
         """
@@ -162,10 +163,9 @@ class LM:
 
     def ppl(self, text):
         """
-        EVALUATION (mainly for word-based models)
         Perplexity of a text for the given model.
         That is 2 ^ cross_entropy(text). Bits per gram here is cross entropy.
         :param text:
         :return:
         """
-        return np.power(2, self.bpg(text))
+        return np.power(2, self.cross_entropy(text))
