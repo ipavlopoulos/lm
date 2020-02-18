@@ -1,9 +1,20 @@
 from collections import *
 import numpy as np
 import random
+import pickle
 
 CHARACTER = "CHAR"
 WORD = "WORD"
+
+
+def load(name):
+    """
+    Load a LM as >>> ngram = models.load("2gram_char_lm.pkl")
+    :param name:
+    :return:
+    """
+    with open(name, "rb") as f:
+        return pickle.load(f)
 
 
 def normalize(next_grams_counter):
@@ -27,6 +38,7 @@ class LM:
         self.gram = gram
         self.n = n
         self.model = {}
+        self.name = str(n)+"gram_"+gram.lower()[:4]+"_lm"
         self.vocabulary = {}
 
     def pad(self):
@@ -160,6 +172,10 @@ class LM:
         # Turn to bits and return bits per character
         log_probs = list(map(np.log2, probs))
         return -np.mean(log_probs)
+
+    def save(self):
+        with open(self.name+".pkl", "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)
 
     def ppl(self, text):
         """
