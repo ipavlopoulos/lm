@@ -65,18 +65,70 @@ class RNN:
         y = to_categorical(y, num_classes=self.vocab_size)
         return X, y
 
+    def generate_next_gram(self, history):
+        # encode the text using their UIDs
+        encoded = self.tokenizer.texts_to_sequences([history])[0]
+        context_encoded = encoded[- 2 * self.window + 1:]
+        # predict a word from the vocabulary
+        predicted_index = self.model.predict_classes([context_encoded], verbose=0)
+        # map predicted word index to word
+        next_word = self.i2w[predicted_index[0]]
+        return next_word
+
     # generate a sequence from the model
     def generate_seq(self, seed_text, n_words):
         out_text = seed_text
         # generate a fixed number of words
         for _ in range(n_words):
-            # encode the text as integer
-            encoded = self.tokenizer.texts_to_sequences([out_text])[0]
-            encoded = encoded[- 2 * self.window + 1:]
-            # predict a word in the vocabulary
-            predicted_index = self.model.predict_classes([encoded], verbose=0)
-            # map predicted word index to word
-            out_word = self.i2w[predicted_index[0]]
+            out_word = self.generate_next_gram(out_text)
             # append to input
             out_text += " " + out_word
         return out_text
+
+    def compute_gram_probs(self, text):
+        """
+        The probabilities of the words of the given text.
+        :param text: The text the words of which we want to compute the probabilities for.
+        :return: A list of probabilities, each in [0,1]
+        """
+        encoded = self.tokenizer.texts_to_sequences([text])[0]
+        history = 2 * self.window - 1
+        probs = []
+        for i in range(history, len(encoded)):
+            target = encoded[i]
+            context_encoded = encoded[i-history:i]
+            p = self.model.predict([context_encoded], verbose=0)[0][target]
+            probs.append(p)
+        return probs
+
+    def cross_entropy(self, text, PPL=False):
+        """
+        Cross Entropy of the observed grams. To get the Perplexity (PPL) compute:
+        np.power(2, self.cross_entropy(text)).
+
+        :param text: The text to compute BPG for.
+        :param PPL: Whether the return the Perplexity score or the cross entropy
+        :return: A float number, the lower the better.
+        """
+        # Get the character probabilities
+        probs = self.compute_gram_probs(text)
+        # Turn to bits and return bits per character
+        log_probs = list(map(np.log2, probs))
+        ce = -np.mean(log_probs)
+        return np.power(2, ce) if PPL else ce
+
+    def accuracy(self, text):
+        """
+        Accuracy of predicting the observed grams.
+        :param text: The text to compute the Accuracy.
+        :return: A float number; the higher the better.
+        """
+        encoded = self.tokenizer.texts_to_sequences([text])[0]
+        history = 2 * self.window - 1
+        scores = []
+        for i in range(history, len(encoded)):
+            target = encoded[i]
+            context_encoded = encoded[i-history:i]
+            predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
+            scores.append(1 if target == predicted else 0)
+        return np.mean(scores)
