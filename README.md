@@ -27,8 +27,8 @@ Language Modelling (LM) modules.
 ### Neural
 * Uses an RNN to generate the next word.
 ```python
->>> from neural import models
->>> rnn = models.RNN(epochs=1)
+>>> from neural.models import RNN
+>>> rnn = RNN(epochs=1)
 >>> data = """ Jack and Jill went up the hill\n
 		To fetch a pail of water\n
 		Jack fell down and broke his crown\n
