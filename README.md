@@ -26,6 +26,7 @@ Language Modelling (LM) modules.
 
 ### Neural
 * Uses an RNN to generate the next word.
+```python
 >>> from neural import models
 >>> rnn = models.RNN(epochs=1)
 >>> data = """ Jack and Jill went up the hill\n
@@ -34,3 +35,4 @@ Language Modelling (LM) modules.
 		And Jill came tumbling after\n """
 >>> rnn.train(data)
 >>> rnn.cross_entropy("Jack fell down and broke his crown\n")
+```
