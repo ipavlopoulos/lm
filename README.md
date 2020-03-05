@@ -24,6 +24,13 @@ Language Modelling (LM) modules.
 22.423014640489697
 ```
 
-### Following...
-* Neural Language Modeling (experimental implementation included)
-* Text Classification
+### Neural
+* Uses an RNN to generate the next word.
+>>> from neural import models
+>>> rnn = models.RNN(epochs=1)
+>>> data = """ Jack and Jill went up the hill\n
+		To fetch a pail of water\n
+		Jack fell down and broke his crown\n
+		And Jill came tumbling after\n """
+>>> rnn.train(data)
+>>> rnn.cross_entropy("Jack fell down and broke his crown\n")
