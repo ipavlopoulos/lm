@@ -70,7 +70,7 @@ class RNN:
         encoded = self.tokenizer.texts_to_sequences([history])[0]
         context_encoded = encoded[- 2 * self.window + 1:]
         # predict a word from the vocabulary
-        predicted_index = self.model.predict_classes([context_encoded], verbose=0)
+        predicted_index = self.model.predict_classes(np.array([context_encoded]), verbose=0)
         # map predicted word index to word
         next_word = self.i2w[predicted_index[0]]
         return next_word
@@ -97,7 +97,7 @@ class RNN:
         for i in range(history, len(encoded)):
             target = encoded[i]
             context_encoded = encoded[i-history:i]
-            p = self.model.predict([context_encoded], verbose=0)[0][target]
+            p = self.model.predict(np.array([context_encoded]), verbose=0)[0][target]
             probs.append(p)
         return probs
 
