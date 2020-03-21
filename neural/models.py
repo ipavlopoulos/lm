@@ -68,9 +68,11 @@ class RNN:
     def generate_next_gram(self, history):
         # encode the text using their UIDs
         encoded = self.tokenizer.texts_to_sequences([history])[0]
-        context_encoded = encoded[- 2 * self.window + 1:]
+        context_encoded = np.array([encoded[- 2 * self.window + 1:]])
         # predict a word from the vocabulary
-        predicted_index = self.model.predict_classes(np.array([context_encoded]), verbose=0)
+        if context_encoded.ndim == 1:
+            context_encoded = np.array([context_encoded])
+        predicted_index = self.model.predict_classes(context_encoded, verbose=0)
         # map predicted word index to word
         next_word = self.i2w[predicted_index[0]]
         return next_word
@@ -96,8 +98,10 @@ class RNN:
         probs = []
         for i in range(history, len(encoded)):
             target = encoded[i]
-            context_encoded = encoded[i-history:i]
-            p = self.model.predict(np.array([context_encoded]), verbose=0)[0][target]
+            context_encoded = np.array([encoded[i-history:i]])
+            if context_encoded.ndim == 1:
+                context_encoded = np.array([context_encoded])
+            p = self.model.predict(context_encoded, verbose=0)[0][target]
             probs.append(p)
         return probs
 
