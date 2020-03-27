@@ -6,11 +6,13 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Embedding
 
-def demo():
+
+def get_plato_rnn():
     from urllib.request import urlopen
-    rnn_lm = RNN()
+    rnn_lm = RNN(epochs=1000, patience=10)
     plato = urlopen("http://www.gutenberg.org/cache/epub/1497/pg1497.txt").read().decode("utf8")
-    rnn_lm.train(plato[:1000])
+    rnn_lm.train(plato[:10000])
+    return rnn_lm
 
 class RNN:
     """
@@ -19,13 +21,15 @@ class RNN:
     plato = urlopen("http://www.gutenberg.org/cache/epub/1497/pg1497.txt").read().decode("utf8")
     rnn_lm.train(plato)
     """
-    def __init__(self, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50, max_seq_len=512, window=3):
+    def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50, max_seq_len=512, window=3):
         self.batch_size = batch_size
         self.epochs = epochs
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
         self.window = window
+        self.stacks = stacks
         self.vocab_size = vocab_size
+        self.split = split
         self.max_seq_len = max_seq_len
         self.early_stop = EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
         self.tokenizer = None
@@ -34,7 +38,8 @@ class RNN:
     def build(self):
         self.model = Sequential()
         self.model.add(Embedding(self.vocab_size, 200, input_length=2*self.window-1))
-        self.model.add(LSTM(self.hidden_size, return_sequences=True))
+        for stack in range(self.stacks):
+            self.model.add(LSTM(self.hidden_size, return_sequences=True))
         self.model.add(LSTM(self.hidden_size))
         self.model.add(Dense(self.output_mlp_size, activation='relu'))
         self.model.add(Dense(self.vocab_size, activation='softmax'))
@@ -43,7 +48,7 @@ class RNN:
     def train(self, text):
         x, y = self.text_to_sequences(text)
         self.build()
-        self.model.fit(x, y, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
+        self.model.fit(x, y, validation_split=self.split, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
 
     def text_to_sequences(self, text):
         self.tokenizer = Tokenizer()
@@ -104,6 +109,28 @@ class RNN:
             p = self.model.predict(context_encoded, verbose=0)[0][target]
             probs.append(p)
         return probs
+
+    def predict_words(self, text):
+        """
+        Mean Reciprocal Rank ( = 1 - Word Error Rate)
+        Predict the words of this text, using only the preceding grams.
+        :param text: The text to test.
+        :return: Return a list of fails/wins (one per word).
+        """
+        encoded = self.tokenizer.texts_to_sequences([text])[0]
+        history = 2 * self.window - 1
+        context_windows = [encoded[i-history:i] for i in range(history, len(encoded))]
+        predicted_indices = self.model.predict_classes(context_windows, verbose=0)
+        return [None for i in range(history)] + [self.i2w[i] for i in list(predicted_indices)]
+        # map predicted word index to word
+        #generated_words.append(predicted_index)
+        #word_probs = self.model.predict(context_encoded, verbose=0)[0]
+        #assert predicted_index == np.argmax(word_probs)
+        #p = word_probs[target]
+        #next_word = self.i2w[predicted_index]
+        #print(f"`{next_word}' was returned; the right word ({self.i2w[target]}) was found at index: {sorted(word_probs).index(p)}")
+        #return np.mean(errors)
+
 
     def cross_entropy(self, text, PPL=False):
         """
