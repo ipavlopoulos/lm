@@ -1,6 +1,6 @@
 import numpy as np
 from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+#from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
@@ -27,6 +27,7 @@ class RNN:
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
         self.window = window
+        self.n = 2*window-1
         self.stacks = stacks
         self.vocab_size = vocab_size
         self.split = split
