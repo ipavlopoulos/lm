@@ -13,11 +13,10 @@ train_size = 10000
 vocab_size = 1000
 N = 3
 
-#TODO: Get IUXRAY
-
-# PARSE MIMIC
-
-# filter the data
+#TODO
+# a. Get IUXRAY
+# b. Preprocess
+# c. Run some LMs
 
 if use_impressions_only:
     # Use only the IMPRESSION section from each report

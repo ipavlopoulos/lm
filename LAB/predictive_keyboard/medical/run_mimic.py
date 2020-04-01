@@ -17,21 +17,21 @@ N = 3
 
 
 # PARSE MIMIC
-notes = pd.read_csv("./data/NOTEEVENTS.csv.gz")
-patients = pd.read_csv("./data/PATIENTS.csv.gz")
-admissions = pd.read_csv("./data/ADMISSIONS.csv.gz")
-diagnoses = pd.read_csv("./data/DIAGNOSES_ICD.csv.gz")
+notes = pd.read_csv("./DATA/NOTEEVENTS.csv.gz")
+patients = pd.read_csv("./DATA/PATIENTS.csv.gz")
+admissions = pd.read_csv("./DATA/ADMISSIONS.csv.gz")
+diagnoses = pd.read_csv("./DATA/DIAGNOSES_ICD.csv.gz")
 icds = diagnoses.groupby(by=["subject_id".upper()]).ICD9_CODE.apply(list)
 # add gender information
 data = pd.merge(left=notes[["SUBJECT_ID", "CATEGORY", "TEXT"]], right=patients[["SUBJECT_ID", "GENDER"]], left_on="SUBJECT_ID", right_on="SUBJECT_ID")
 # add ICD9 codes
-# data = pd.merge(left=data[["SUBJECT_ID", "CATEGORY", "TEXT", "GENDER"]],
+# DATA = pd.merge(left=DATA[["SUBJECT_ID", "CATEGORY", "TEXT", "GENDER"]],
 #                right=icds, left_on="SUBJECT_ID", right_on="SUBJECT_ID")
 
 # print some gender-based stats
 print(data.GENDER.value_counts())
 
-# filter the data
+# filter the DATA
 if use_radiology_only:
     # Use only reports about Radiology
     data = data[data.CATEGORY == "Radiology"]
