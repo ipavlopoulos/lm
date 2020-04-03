@@ -13,43 +13,30 @@ train_size = 10000
 vocab_size = 1000
 N = 3
 
-#TODO
-# a. Get IUXRAY
-# b. Preprocess
-# c. Run some LMs
+data = pd.read_csv("./DATA/iuxray.csv")
+data["TEXT"] = data.indication + data.comparison + data.findings + data.impression
 
 if use_impressions_only:
     # Use only the IMPRESSION section from each report
-    data = data[data.TEXT.str.contains("IMPRESSION:")]
-    data.TEXT = data.TEXT.apply(lambda report: report.split("IMPRESSION:")[1])
+    data.TEXT = data.impression
 
 # TRAIN/TEST split
-if use_gender_split:
-    data_m = data[data.GENDER == "M"]
-    data_f = data[data.GENDER == "F"]
-    data = pd.concat([data_m.sample(train_size*5), data_f.sample(train_size*5)]).sample(frac=1).reset_index(drop=True)
-
-train = data.sample(train_size*2)
-train, test = train_test_split(train, test_size=int(train_size/10), random_state=42)
-
+train, test = train_test_split(data, test_size=int(train_size/10), random_state=42)
+train = train.dropna(subset=["TEXT"])
+test = test.dropna(subset=["TEXT"])
 
 # TRAIN NGRAMs: one on male patients, one on female and one when disregarding gender
 # get a sample of the texts per gender
-texts = train.sample(int(train_size/2)).TEXT
-texts_m = train[train.GENDER == "M"].TEXT
-texts_f = train[train.GENDER == "F"].TEXT
+texts = train.TEXT
 
 # preprocess
 if use_preprocessing:
     texts = texts.apply(preprocess)
-    texts_m = texts_m.apply(preprocess)
-    texts_f = texts_f.apply(preprocess)
 
 
 # take the words (efficiently)
 words = " ".join(texts.to_list()).split()
-words_m = " ".join(texts_m.to_list()).split()
-words_f = " ".join(texts_f.to_list()).split()
+
 
 # create a vocabulary
 WF = Counter(words)
@@ -61,28 +48,19 @@ V = set(V)
 
 # substitute any unknown words in the texts
 words = fill_unk(words_to_fill=words, lexicon=V)
-words_m = fill_unk(words_to_fill=words_m, lexicon=V)
-words_f = fill_unk(words_to_fill=words_f, lexicon=V)
 
 test["WORDS"] = test.apply(lambda row: fill_unk(V, preprocess(row.TEXT).split()), 1)
 
 # train the n-grams
-for name, dataset in (("gender-agnostic", words), ("male", words_m), ("female", words_f)):
-    wlm = markov_models.LM(gram=markov_models.WORD, n=N).train(dataset)
-    print(f"WER of {name}-NGRAM:")
-    print(f'@M:{test[test.GENDER == "M"].WORDS.apply(lambda words: wer(words, wlm))}')
-    print(f'@F:{test[test.GENDER == "F"].WORDS.apply(lambda words: wer(words, wlm))}')
-# >>> WER of MALE-NGRAM: (0.8298521221038996, 0.8174244389937317)
-# >>> WER of FEMALE-NGRAM: (0.8252274537647764, 0.8133000318371052)
-# >>> WER of ANY-NGRAM: (0.8373151970659237, 0.8264538956122482)
+wlm = markov_models.LM(gram=markov_models.WORD, n=N).train(words)
+
+print(f"WER of {N}-GRAM:{test.WORDS.apply(lambda words: wer(words, wlm)).mean()}")
+# >>> WER of 3-GRAM:0.6566886422635119
 
 # Run a Neural LM
 rnn = neural_models.RNN(epochs=10)
 rnn.train(words)
 print(f"WER of RNNLM:")
-male_accuracies = test[test.GENDER == "M"].WORDS.apply(lambda words: 1-rnn.accuracy(" ".join(words)))
-female_accuracies = test[test.GENDER == "F"].WORDS.apply(lambda words: 1-rnn.accuracy(" ".join(words)))
-print(f'@M:{male_accuracies.mean()}±{sem(female_accuracies)}')
-print(f'@F:{female_accuracies.mean()}±{sem(female_accuracies)}')
-# >>> @M:0.636
-# >>> @F:0.626
+accuracies = test.WORDS.apply(lambda words: 1-rnn.accuracy(" ".join(words)))
+print(f'@F:{accuracies.mean()}±{sem(accuracies)}')
+# >>> 0.6266539363236362
