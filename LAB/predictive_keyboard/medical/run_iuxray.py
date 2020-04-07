@@ -9,9 +9,8 @@ from toolkit import *
 # FLAGS
 use_impressions_only = True
 use_preprocessing = True
-train_size = 10000
-vocab_size = 1000
-N = 3
+train_size = 20000
+vocab_size = 100
 
 data = pd.read_csv("./DATA/iuxray.csv")
 data["TEXT"] = data.indication + data.comparison + data.findings + data.impression
@@ -51,16 +50,14 @@ words = fill_unk(words_to_fill=words, lexicon=V)
 
 test["WORDS"] = test.apply(lambda row: fill_unk(V, preprocess(row.TEXT).split()), 1)
 
-# train the n-grams
-wlm = markov_models.LM(gram=markov_models.WORD, n=N).train(words)
+# train the N-Grams for N: 1 to 10
+for N in range(1, 10):
+    wlm = markov_models.LM(gram=markov_models.WORD, n=N).train(words)
+    print(f"WER of {N}-GRAM:{test.WORDS.apply(lambda words: wer(words, wlm)).mean()}")
 
-print(f"WER of {N}-GRAM:{test.WORDS.apply(lambda words: wer(words, wlm)).mean()}")
-# >>> WER of 3-GRAM:0.6566886422635119
-
-# Run a Neural LM
-rnn = neural_models.RNN(epochs=10)
+# train RNNLM
+rnn = neural_models.RNN(epochs=1000)
 rnn.train(words)
 print(f"WER of RNNLM:")
 accuracies = test.WORDS.apply(lambda words: 1-rnn.accuracy(" ".join(words)))
-print(f'@F:{accuracies.mean()}±{sem(accuracies)}')
-# >>> 0.6266539363236362
+print(f'@F:{accuracies.mean()}±{sem(accuracies.to_list())}')
