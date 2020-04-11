@@ -60,7 +60,7 @@ def parse_data(dataset):
     # Keep it fair among datasets, so keep the smallest
     if FLAGS.dataset_size < data.shape[0]:
         print(f"Reducing the data, which originally had {data.shape[0]} texts included.")
-        data = data.sample(FLAGS.data_size, random_state=42)
+        data = data.sample(FLAGS.dataset_size, random_state=42)
     if FLAGS.preprocess == 1:
         data.TEXT = data.TEXT.apply(preprocess)
     data["WORDS"] = data.TEXT.str.split()
