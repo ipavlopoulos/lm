@@ -90,6 +90,7 @@ class LM:
         # The beginning of the text
         history = self.pad()
         probs = []
+        prior = 1.0 / len(self.vocabulary)
         # Parse all text grams
         for i in range(len(grams)):
             # Get the preceding n chars
@@ -98,13 +99,13 @@ class LM:
             next_gram = grams[i]
             # If the history is unknown, assign zero probability (near zero to make log work)
             if past_ngram not in self.model:
-                prob = 10e-10
+                prob = prior
             else:
                 # Get the probability of the next gram
                 probable_next_grams = dict(self.model[past_ngram])
                 # If it is unknown, assign zero prob
                 if next_gram not in probable_next_grams:
-                    prob = 10e-10
+                    prob = prior
                 else:
                     prob = probable_next_grams[next_gram]
             # Append the probability and update history

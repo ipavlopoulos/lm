@@ -6,12 +6,12 @@ from collections import Counter
 from scipy.stats import sem
 from toolkit import *
 
-# FLAGS
+# todo: add FLAGS
 if __name__ == "main":
-    use_impressions_only = True
+    use_impressions_only = False
     use_preprocessing = True
-    train_size = 20000
-    vocab_size = 100
+    test_size = 100
+    vocab_size = 10000
 
     data = pd.read_csv("./DATA/iuxray.csv")
     data["TEXT"] = data.indication + data.comparison + data.findings + data.impression
@@ -21,7 +21,7 @@ if __name__ == "main":
         data.TEXT = data.impression
 
     # TRAIN/TEST split
-    train, test = train_test_split(data, test_size=int(train_size / 10), random_state=42)
+    train, test = train_test_split(data, test_size=test_size, random_state=42)
     train = train.dropna(subset=["TEXT"])
     test = test.dropna(subset=["TEXT"])
 
@@ -46,7 +46,6 @@ if __name__ == "main":
 
     # substitute any unknown words in the texts
     words = fill_unk(words_to_fill=words, lexicon=V)
-
     test["WORDS"] = test.apply(lambda row: fill_unk(V, preprocess(row.TEXT).split()), 1)
 
     # train the N-Grams for N: 1 to 10
@@ -57,6 +56,5 @@ if __name__ == "main":
     # train RNNLM
     rnn = neural_models.RNN(epochs=1000)
     rnn.train(words)
-    print(f"WER of RNNLM:")
     accuracies = test.WORDS.apply(lambda words: 1 - rnn.accuracy(" ".join(words)))
-    print(f'@F:{accuracies.mean()}±{sem(accuracies.to_list())}')
+    print(f'WER(RNNLM):{accuracies.mean()}±{sem(accuracies.to_list())}')
