@@ -26,7 +26,7 @@ def preprocess(text):
     return text
 
 
-def wer(words, lm):
+def wer(words, lm, lexicon=None):
     """
     Word Error Rate
     That is the percent of words predicted incorrectly (1-MRR1)
@@ -34,11 +34,15 @@ def wer(words, lm):
 
     :param text: the text words
     :param lm: the model
+    :param lexicon: score only words from this lexicon (by default empty)
     :return: the score
     """
     results = []
     for i in range(lm.n, len(words)):
         gold_word = words[i]
+        if lexicon is not None:
+            if gold_word not in lexicon:
+                continue
         history = words[i-lm.n:i]
         pred_word = lm.generate_next_gram(history)
         results.append(0 if gold_word == pred_word else 1)# count the errors
