@@ -35,6 +35,7 @@ flags.DEFINE_integer("explore_vocab_sensitivity", 0, "Whether to run N-Grams w.r
 flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
 flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default).")
+flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -99,9 +100,9 @@ def assess_lstmlm(datasets, include_macro=False):
     print("Setting up the RNNLM...")
     micro, macro = [], []
     for train_words, test_words, test in datasets:
-        rnn = neural_models.RNN(epochs=1000)
+        rnn = neural_models.RNN(epochs=FLAGS.epochs)
         rnn.train(train_words)
-        micro.append(rnn.accuracy(' '.join(test_words)))
+        micro.append(rnn.accuracy(' '.join(test_words), unwanted_word=xxxx))
         if not include_macro:
             continue
         macro.append(test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words))).mean())

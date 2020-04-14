@@ -148,9 +148,10 @@ class RNN:
         ce = -np.mean(log_probs)
         return np.power(2, ce) if PPL else ce
 
-    def accuracy(self, text):
+    def accuracy(self, text, unwanted_term="xxxx"):
         """
         Accuracy of predicting the observed grams.
+        :param unwanted_term: if this term is included in a word, ignore.
         :param text: The text to compute the Accuracy.
         :return: A float number; the higher the better.
         """
@@ -159,6 +160,9 @@ class RNN:
         scores = []
         for i in range(history, len(encoded)):
             target = encoded[i]
+            if unwanted_term in self.i2w[target]:
+                print("Unwanted word found!")
+                continue
             context_encoded = encoded[i-history:i]
             predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
             scores.append(1 if target == predicted else 0)
