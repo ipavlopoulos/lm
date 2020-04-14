@@ -161,7 +161,6 @@ class RNN:
         for i in range(history, len(encoded)):
             target = encoded[i]
             if unwanted_term in self.i2w[target]:
-                print("Unwanted word found!")
                 continue
             context_encoded = encoded[i-history:i]
             predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
