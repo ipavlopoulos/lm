@@ -30,7 +30,7 @@ flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
 flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
 flags.DEFINE_integer("dataset_size", 2928, "The size of the dataset. Default is the small size of iuxray. Assign a "
                                            "large integer to have it in full (e.g., 1000000).")
-flags.DEFINE_integer("include_neural", 1, "Whether to include RNNLM (1) or not (0).")
+flags.DEFINE_string("method", "neural", "Either neural or ngrams.")
 flags.DEFINE_integer("explore_vocab_sensitivity", 1, "Whether to run N-Grams w.r.t. vocabulary size (1) or not (0).")
 flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
@@ -159,15 +159,16 @@ def main(argv):
         test_words = test.WORDS.sum()
         datasets.append((train_words, test_words, test))
 
-    # print("Evaluating N-Grams on the test...")
-    acc = assess_nglms(datasets)
-    for n in range(1, 9):
-        print(f"{n}-GLM & " +
-              f"{100 * np.mean(acc['micro'][n]):.2f}±{100*sem(acc['micro'][n]):.2f} & " +
-              f"{100 * np.mean(acc['macro'][n]):.2f}±{100*sem(acc['macro'][n]):.2f}\\\\")
+    if FLAGS.method == "ngrams":
+        # print("Evaluating N-Grams on the test...")
+        acc = assess_nglms(datasets)
+        for n in range(1, 9):
+            print(f"{n}-GLM & " +
+                  f"{100 * np.mean(acc['micro'][n]):.2f}±{100*sem(acc['micro'][n]):.2f} & " +
+                  f"{100 * np.mean(acc['macro'][n]):.2f}±{100*sem(acc['macro'][n]):.2f}\\\\")
 
-    if FLAGS.include_neural == 1:
-        print(assess_lstmlm(datasets, include_macro=False))
+    if FLAGS.method == "neural":
+        print(assess_lstmlm(datasets, include_macro=True))
 
     if FLAGS.stopwords_only == 1:
         stopwords_analysis(datasets)
