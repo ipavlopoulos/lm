@@ -34,7 +34,7 @@ flags.DEFINE_string("method", "neural", "Either neural or ngrams.")
 flags.DEFINE_integer("explore_vocab_sensitivity", 0, "Whether to run N-Grams w.r.t. vocabulary size (1) or not (0).")
 flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
-
+flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default).")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -97,14 +97,15 @@ def assess_nglms(datasets, kappas=range(1, 9)):
 
 def assess_lstmlm(datasets, include_macro=False):
     print("Setting up the RNNLM...")
+    micro, macro = [], []
     for train_words, test_words, test in datasets:
         rnn = neural_models.RNN(epochs=1000)
         rnn.train(train_words)
-        micro_accuracy = rnn.accuracy(' '.join(test_words))
+        micro.append(rnn.accuracy(' '.join(test_words)))
         if not include_macro:
-            return micro_accuracy
-        macro_accuracy = test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words)))
-        return micro_accuracy, (macro_accuracy.mean(), sem(macro_accuracy))
+            continue
+        macro.append(test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words))).mean())
+    return micro, macro
 
 
 def stopwords_analysis(datasets):
@@ -176,7 +177,8 @@ def main(argv):
                   f"{100 * np.mean(acc['macro'][n]):.2f} ± {100*sem(acc['macro'][n]):.2f}\\\\")
 
     if FLAGS.method == "neural":
-        print(assess_lstmlm(datasets, include_macro=True))
+        micro, macro = assess_lstmlm(datasets, include_macro=True)
+        print(f"micro:{np.mean(micro)} ± {sem(micro)}, macro:{np.mean(macro)} ± {sem(macro)}")
 
     if FLAGS.stopwords_only == 1:
         stopwords_analysis(datasets)
