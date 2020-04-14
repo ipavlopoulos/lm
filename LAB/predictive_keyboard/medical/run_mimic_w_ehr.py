@@ -88,8 +88,8 @@ if __name__ == "main":
     for name, dataset in (("gender-agnostic", words), ("male", words_m), ("female", words_f)):
         wlm = markov_models.LM(gram=markov_models.WORD, n=N).train(dataset)
         print(f"WER of {name}-NGRAM:")
-        print(f'@M:{test[test.GENDER == "M"].WORDS.apply(lambda words: wer(words, wlm))}')
-        print(f'@F:{test[test.GENDER == "F"].WORDS.apply(lambda words: wer(words, wlm))}')
+        print(f'@M:{test[test.GENDER == "M"].WORDS.apply(lambda words: accuracy(words, wlm))}')
+        print(f'@F:{test[test.GENDER == "F"].WORDS.apply(lambda words: accuracy(words, wlm))}')
     # >>> WER of MALE-NGRAM: (0.8298521221038996, 0.8174244389937317)
     # >>> WER of FEMALE-NGRAM: (0.8252274537647764, 0.8133000318371052)
     # >>> WER of ANY-NGRAM: (0.8373151970659237, 0.8264538956122482)

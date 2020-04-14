@@ -20,13 +20,21 @@ from collections import Counter
 from absl import flags, logging, app
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("section_name", None, "Empty (default), impression, findings, comparison, indication")
+flags.DEFINE_string("section_name", None, "Valid only for IUXRay. Focus to a single section of the report. Examples:"
+                                          "'impression', 'findings', 'comparison', 'indication'. Default is None.")
+flags.DEFINE_string("report_type", "Radiology", "Valid only for MIMIC-III. Examples: 'Radiology', 'Discharge summary'."
+                                                "Default is 'Radiology'.")
 flags.DEFINE_integer("test_size", 100, "Test size.")
 flags.DEFINE_integer("vocab_size", 100000, "The size of the vocabulary; rare words are discarded.")
 flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
 flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
 flags.DEFINE_integer("dataset_size", 2928, "The size of the dataset. Default is the small size of iuxray. Assign a "
                                            "large integer to have it in full (e.g., 1000000).")
+flags.DEFINE_integer("include_neural", 1, "Whether to include RNNLM (1) or not (0).")
+flags.DEFINE_integer("explore_vocab_sensitivity", 1, "Whether to run N-Grams w.r.t. vocabulary size (1) or not (0).")
+flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
+flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
+
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -49,7 +57,7 @@ def parse_data(dataset):
     elif dataset == MIMIC:
         data = pd.read_csv("./DATA/NOTEEVENTS.csv.gz")
         # Using only reports about Radiology here
-        data = data[data.CATEGORY == "Radiology"]
+        data = data[data.CATEGORY == FLAGS.report_type]
         if FLAGS.section_name is not None:
             # Use only a section from each report
             assert FLAGS.section_name in {"indication", "comparison", "findings", "impression"}
@@ -76,43 +84,97 @@ def train_the_ngram_lms(words, kappas=range(1, 9)):
     return models
 
 
-def main(argv):
-    data = parse_data(FLAGS.dataset_name)
-    train, test = train_test_split(data, test_size=FLAGS.test_size, random_state=42)
-    #train_words = " ".join(train.TEXT.to_list()).split()
-    train_words = train.WORDS.sum()
+def assess_nglms(datasets, kappas=range(1, 9)):
+    acc = {"micro": {k:[] for k in kappas}, "macro":{k:[] for k in kappas}}
+    for train_words, test_words, test in datasets:
+        # Assess the N-Gram-based LMs
+        lms = train_the_ngram_lms(train_words, kappas=kappas)
+        for n in lms:
+            acc["micro"][n].append(accuracy(test_words, lms[n]))
+            acc["macro"][n].append(test.WORDS.apply(lambda words: accuracy(words, lms[n])).mean())
+    return acc
 
-    # Assess the N-Gram-based LMs
+
+def assess_lstmlm(datasets, include_macro=False):
+    print("Setting up the RNNLM...")
+    for train_words, test_words, test in datasets:
+        rnn = neural_models.RNN(epochs=1000)
+        rnn.train(train_words)
+        micro_accuracy = rnn.accuracy(' '.join(test_words))
+        if not include_macro:
+            return micro_accuracy
+        macro_accuracy = test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words)))
+        return micro_accuracy, macro_accuracy
+
+
+def stopwords_analysis(datasets):
+    train_words, test_words, test = datasets[-1]
+    # Study what happens when only stop words are used.
+    # Use the word list from https://www.textfixer.com/tutorials/common-english-words.txt
+    print("Exploring the use on Stop Words...")
+    stopwords = {"i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself",
+                 "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its",
+                 "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this",
+                 "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has",
+                 "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or",
+                 "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between",
+                 "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in",
+                 "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when",
+                 "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some",
+                 "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can",
+                 "will", "just", "don", "should", "now"}
+    print(f"Stop tokens are: {len([w for w in test_words if w in stopwords])} out of {len(test_words)} @test.")
     lms = train_the_ngram_lms(train_words)
     for n in lms:
-        print(f"WER({n}-GRAM) @micro:{wer(test.WORDS.sum(), lms[n])}")
-        print(f"WER({n}-GRAM) @macro:{test.WORDS.apply(lambda words: wer(words, lms[n])).mean()}")
+        micro_ac = accuracy(words=test_words, lm=lms[n], lexicon=stopwords)
+        macro_ac = test.WORDS.apply(lambda words: accuracy(words=words, lm=lms[n], lexicon=stopwords)).mean()
+        print(f"{n} \t {100 * micro_ac:.2f} \t {100 * macro_ac:.2f}")
 
-    # Assess a RNN-based LM
-    rnn = neural_models.RNN(epochs=1000)
-    rnn.train(train_words)
-    print(f"WER(RNNLM) @micro: {1 - rnn.accuracy(' '.join(test.WORDS.sum()))}")
-    accuracies = test.WORDS.apply(lambda words: 1 - rnn.accuracy(" ".join(words)))
-    print(f'WER(RNNLM) @macro:{accuracies.mean()}±{sem(accuracies.to_list())}')
 
+def vocab_size_sensitivity(datasets):
+    train_words, test_words, test = datasets[-1]
+    print("Investigating the effect of the vocabulary size (using a single split & micro ER)...")
     # Study the effect of vocabulary size on the best performing 4-Gram-based LM
-    test_words = test.WORDS.sum()
     V = Counter(train_words)
-    vf_wer = {"V":[], "1-GLM":[], "2-GLM":[], "3-GLM":[], "4-GLM":[], "5-GLM":[], "6-GLM":[], "7-GLM":[], "8-GLM":[],}
+    vf_wer = {"V": [], "1-GLM": [], "2-GLM": [], "3-GLM": [], "4-GLM": [], "5-GLM": [], "6-GLM": [], "7-GLM": [],
+              "8-GLM": [], }
     for f in range(10, len(V), 10):
         vf, _ = zip(*V.most_common(f))
         vf_wer["V"].append(f)
         for i in range(1, 9):
-            vf_wer[f"{i}-GLM"].append(wer(test_words, lms[i], lexicon=vf))
+            vf_wer[f"{i}-GLM"].append(accuracy(test_words, lms[i], lexicon=vf))
 
-    vstudy = pd.DataFrame(vf_wer)
-    vstudy.to_csv(f"{FLAGS.dataset_name}.vstudy.csv", index=False)
+        vstudy = pd.DataFrame(vf_wer)
+        vstudy.to_csv(f"{FLAGS.dataset_name}.vstudy.csv", index=False)
+        # Plot as follows: >> ax = vstudy.plot(x="V"); ax.set(xlabel="Vocabulary size", ylabel="Error Rate")
 
-    #ax = vstudy.plot(x="V", title=f"Error Rate in {FLAGS.dataset_name}", ylim=[0.3, 1])
-    #ax.set(xlabel="Vocabulary size", ylabel="Error Rate")
 
-    # study what happens only in stop words - use also the RNN
-    # use https://www.textfixer.com/tutorials/common-english-words.txt
+def main(argv):
+    data = parse_data(FLAGS.dataset_name)
+    # create the MC sampled data sets
+    datasets = []
+    for i in range(FLAGS.repetitions):
+        train, test = train_test_split(data, test_size=FLAGS.test_size, random_state=42)
+        train_words = train.WORDS.sum()  # " ".join(train.TEXT.to_list()).split()
+        test_words = test.WORDS.sum()
+        datasets.append((train_words, test_words, test))
+
+    # print("Evaluating N-Grams on the test...")
+    acc = assess_nglms(datasets)
+    for n in range(1, 9):
+        print(f"{n}-GLM & " +
+              f"{100 * np.mean(acc['micro'][n]):.2f}±{100*sem(acc['micro'][n]):.2f} & " +
+              f"{100 * np.mean(acc['macro'][n]):.2f}±{100*sem(acc['macro'][n]):.2f}\\\\")
+
+    if FLAGS.include_neural == 1:
+        print(assess_lstmlm(datasets, include_macro=False))
+
+    if FLAGS.stopwords_only == 1:
+        stopwords_analysis(datasets)
+
+    if FLAGS.explore_vocab_sensitivity == 1:
+        vocab_size_sensitivity(datasets)
+
 
 if __name__ == "__main__":
     app.run(main)

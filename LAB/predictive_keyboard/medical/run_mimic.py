@@ -57,7 +57,7 @@ if __name__ == "main":
     # train the N-Grams for N: 1 to 10
     for N in range(1, 10):
         wlm = markov_models.LM(gram=markov_models.WORD, n=N).train(words)
-        print(f"WER of {N}-GRAM:{test.WORDS.apply(lambda words: wer(words, wlm)).mean()}")
+        print(f"WER of {N}-GRAM:{test.WORDS.apply(lambda words: accuracy(words, wlm)).mean()}")
 
     # Run a Neural LM
     rnn = neural_models.RNN(epochs=1000)
