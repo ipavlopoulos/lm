@@ -102,7 +102,7 @@ def assess_lstmlm(datasets, include_macro=False):
     for train_words, test_words, test in datasets:
         rnn = neural_models.RNN(epochs=FLAGS.epochs)
         rnn.train(train_words)
-        micro.append(rnn.accuracy(' '.join(test_words), unwanted_word=xxxx))
+        micro.append(rnn.accuracy(' '.join(test_words), unwanted_term=xxxx))
         if not include_macro:
             continue
         macro.append(test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words))).mean())
