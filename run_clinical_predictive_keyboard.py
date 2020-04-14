@@ -63,13 +63,13 @@ def parse_data(dataset):
         print(f"Reducing the data, which originally had {data.shape[0]} texts included.")
         data = data.sample(FLAGS.dataset_size, random_state=42)
     if FLAGS.preprocess == 1:
-        data.TEXT = data.TEXT.apply(preprocess)
+        data.TEXT = data.TEXT.apply(dedeidentify)
     data["WORDS"] = data.TEXT.str.split()
     return data
 
 
 def train_the_ngram_lms(words, kappas=range(1, 9)):
-    models =  {}
+    models = {}
     for K in kappas:
         ngramlm = markov_models.LM(gram=markov_models.WORD, n=K).train(words)
         models[K] = ngramlm
@@ -112,6 +112,7 @@ def main(argv):
     #ax.set(xlabel="Vocabulary size", ylabel="Error Rate")
 
     # study what happens only in stop words - use also the RNN
+    # use https://www.textfixer.com/tutorials/common-english-words.txt
 
 if __name__ == "__main__":
     app.run(main)

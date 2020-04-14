@@ -1,6 +1,7 @@
 import numpy as np
 import re
 
+xxxx = "xxxx"
 
 def fill_unk(lexicon, words_to_fill, pseudo="UNK"):
     """
@@ -11,6 +12,15 @@ def fill_unk(lexicon, words_to_fill, pseudo="UNK"):
     :return:
     """
     return [w if w in lexicon else pseudo for w in words_to_fill]
+
+
+def dedeidentify(text):
+    """
+    MIMIC-specific
+    :param text: The text to de-de-identify
+    :return:
+    """
+    return re.sub(r"\[\*\*.*\*\*\]", xxxx, text).lower()
 
 
 def preprocess(text):
@@ -26,12 +36,13 @@ def preprocess(text):
     return text
 
 
-def wer(words, lm, lexicon=None):
+def wer(words, lm, lexicon=None, ignore_xxxx=True):
     """
     Word Error Rate
     That is the percent of words predicted incorrectly (1-MRR1)
     given the ground truth history
 
+    :param ignore_xxxx: Ignore the de-identification symbol from the errors.
     :param text: the text words
     :param lm: the model
     :param lexicon: score only words from this lexicon (by default empty)
@@ -40,6 +51,8 @@ def wer(words, lm, lexicon=None):
     results = []
     for i in range(lm.n, len(words)):
         gold_word = words[i]
+        if xxxx in gold_word:
+            continue
         if lexicon is not None:
             if gold_word not in lexicon:
                 continue
