@@ -31,7 +31,7 @@ class RNN:
         self.vocab_size = vocab_size
         self.split = split
         self.max_seq_len = max_seq_len
-        self.early_stop = EarlyStopping(monitor='val_accuracy', patience=patience, restore_best_weights=True)
+        self.early_stop = EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
         self.tokenizer = None
         self.i2w = None
 

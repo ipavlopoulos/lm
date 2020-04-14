@@ -104,7 +104,7 @@ def assess_lstmlm(datasets, include_macro=False):
         if not include_macro:
             return micro_accuracy
         macro_accuracy = test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words)))
-        return micro_accuracy, macro_accuracy
+        return micro_accuracy, (macro_accuracy.mean(), sem(macro_accuracy))
 
 
 def stopwords_analysis(datasets):
