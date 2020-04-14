@@ -131,14 +131,22 @@ def stopwords_analysis(datasets):
         print(f"{n} \t {100 * micro_ac:.2f} \t {100 * macro_ac:.2f}")
 
 
-def vocab_size_sensitivity(datasets):
-    train_words, test_words, test = datasets[-1]
+def vocab_size_sensitivity(datasets, random_choise=-1):
+    """
+    Train N-Gram LMs (from a random split) and assess different usage.
+    That is, only assess words from a lexicon (as if the user was using this only to write stop words).
+    :param datasets:
+    :param random_choise:
+    :return:
+    """
+    train_words, test_words, test = datasets[random_choise]
+    lms = train_the_ngram_lms(train_words)
     print("Investigating the effect of the vocabulary size (using a single split & micro ER)...")
     # Study the effect of vocabulary size on the best performing 4-Gram-based LM
     V = Counter(train_words)
     vf_wer = {"V": [], "1-GLM": [], "2-GLM": [], "3-GLM": [], "4-GLM": [], "5-GLM": [], "6-GLM": [], "7-GLM": [],
               "8-GLM": [], }
-    for f in range(10, len(V), 10):
+    for f in range(50, len(V), 50):
         vf, _ = zip(*V.most_common(f))
         vf_wer["V"].append(f)
         for i in range(1, 9):
