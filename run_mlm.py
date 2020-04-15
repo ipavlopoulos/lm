@@ -71,6 +71,7 @@ def parse_data(dataset):
     if FLAGS.dataset_size < data.shape[0]:
         print(f"Reducing the data, which originally had {data.shape[0]} texts included.")
         data = data.sample(FLAGS.dataset_size, random_state=42)
+        print(f"New dataset size: {data.shape[0]}")
     if FLAGS.preprocess == 1:
         data.TEXT = data.TEXT.apply(dedeidentify)
     data["WORDS"] = data.TEXT.str.split()
@@ -162,8 +163,26 @@ def vocab_size_sensitivity(datasets, random_choise=-1):
         # Plot as follows: >> ax = vstudy.plot(x="V"); ax.set(xlabel="Vocabulary size", ylabel="Error Rate")
 
 
+def data_explorer(data_pd):
+    texts = data_pd.TEXT.sum()
+    words = texts.split()
+    print(f"# character types: {len(set(texts))}")
+    print(f"# character occurrences: {len(texts)}")
+    print(f"# word types: {len(set(words))}")
+    print(f"# word occurrences: {len(texts)}")
+    # todo: add some plot
+
+
 def main(argv):
+
+    # load the data
     data = parse_data(FLAGS.dataset_name)
+    data_explorer(data)
+
+    # perform some exploratory analysis
+    # count words and tokens
+    # info: perhaps also mask rare words to assist training - to be disregarded during testing
+
     # create the MC sampled data sets
     datasets = []
     for i in range(FLAGS.repetitions):
