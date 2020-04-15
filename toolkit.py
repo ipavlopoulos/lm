@@ -2,6 +2,7 @@ import numpy as np
 import re
 
 xxxx = "xxxx"
+oov = "oov"
 
 def fill_unk(lexicon, words_to_fill, pseudo="UNK"):
     """
@@ -50,6 +51,9 @@ def accuracy(words, lm, lexicon=None, ignore_xxxx=True):
     results = []
     for i in range(lm.n, len(words)):
         gold_word = words[i]
+        if gold_word == oov:
+            results.append(0)
+            continue
         if ignore_xxxx and (xxxx in gold_word):
             continue
         if lexicon is not None:

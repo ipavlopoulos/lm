@@ -36,6 +36,7 @@ flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
 flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default).")
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
+flags.DEFINE_integer("min_word_freq", 5, "Any words with frequency less than that are masked and ignored.")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -74,6 +75,7 @@ def parse_data(dataset):
         print(f"New dataset size: {data.shape[0]}")
     if FLAGS.preprocess == 1:
         data.TEXT = data.TEXT.apply(dedeidentify)
+        data.TEXT = data.TEXT.apply(preprocess)
     data["WORDS"] = data.TEXT.str.split()
     return data
 
@@ -166,10 +168,8 @@ def vocab_size_sensitivity(datasets, random_choise=-1):
 def data_explorer(data_pd):
     texts = data_pd.TEXT.sum()
     words = texts.split()
-    print(f"# character types: {len(set(texts))}")
-    print(f"# character occurrences: {len(texts)}")
-    print(f"# word types: {len(set(words))}")
-    print(f"# word occurrences: {len(texts)}")
+    print(f"Character types #: {len(set(texts))} and occurrences: {len(texts)}")
+    print(f"Word types #: {len(set(words))} and occurrences: {len(words)}")
     # todo: add some plot
 
 
@@ -177,6 +177,7 @@ def main(argv):
 
     # load the data
     data = parse_data(FLAGS.dataset_name)
+
     data_explorer(data)
 
     # perform some exploratory analysis
@@ -189,6 +190,11 @@ def main(argv):
         train, test = train_test_split(data, test_size=FLAGS.test_size, random_state=42)
         train_words = train.WORDS.sum()  # " ".join(train.TEXT.to_list()).split()
         test_words = test.WORDS.sum()
+        if FLAGS.min_word_freq > 0:
+            # mask rare words
+            vocab = {w for w, f in Counter(train_words).items() if f > FLAGS.min_word_freq}
+            train_words = [w if w in vocab else oov for w in train_words]
+            test_words = [w if w in vocab else oov for w in test_words]
         datasets.append((train_words, test_words, test))
 
     if FLAGS.method == "ngrams":
