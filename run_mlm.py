@@ -177,8 +177,10 @@ def main(argv):
         acc = assess_nglms(datasets)
         for n in range(1, 9):
             print(f"{n}-GLM & " +
-                  f"{100 * np.mean(acc['micro'][n]):.2f} ± {100*sem(acc['micro'][n]):.2f} & " +
-                  f"{100 * np.mean(acc['macro'][n]):.2f} ± {100*sem(acc['macro'][n]):.2f}\\\\")
+                  f"{100 * np.mean(acc['micro'][n]):.2f} ± {100*sem(acc['micro'][n]):.2f} &" +
+                  (f"{100 * np.mean(acc['macro'][n]):.2f} ± {100*sem(acc['macro'][n]):.2f} " if FLAGS.averaging in {"macro", "both"} else "") +
+                  f"\\\\"
+                  )
 
     if FLAGS.method == "neural":
         micro, macro = assess_lstmlm(datasets)
