@@ -25,7 +25,7 @@ flags.DEFINE_string("section_name", None, "Valid only for IUXRay. Focus to a sin
 flags.DEFINE_string("report_type", "Radiology", "Valid only for MIMIC-III. Examples: 'Radiology', 'Discharge summary'."
                                                 "Default is 'Radiology'.")
 flags.DEFINE_integer("test_size", 100, "Test size.")
-flags.DEFINE_integer("vocab_size", 100000, "The size of the vocabulary; rare words are discarded.")
+flags.DEFINE_integer("vocab_size", 1000, "The size of the vocabulary; rare words are discarded.")
 flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
 flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
 flags.DEFINE_integer("dataset_size", 2928, "The size of the dataset. Default is the small size of iuxray. Assign a "
@@ -92,18 +92,19 @@ def assess_nglms(datasets, kappas=range(1, 9)):
         lms = train_the_ngram_lms(train_words, kappas=kappas)
         for n in lms:
             acc["micro"][n].append(accuracy(test_words, lms[n]))
-            acc["macro"][n].append(test.WORDS.apply(lambda words: accuracy(words, lms[n])).mean())
+            if FLAGS.averaging in {"macro", "both"}:
+                acc["macro"][n].append(test.WORDS.apply(lambda words: accuracy(words, lms[n])).mean())
     return acc
 
 
-def assess_lstmlm(datasets, include_macro=False):
+def assess_lstmlm(datasets):
     print("Setting up the RNNLM...")
     micro, macro = [], []
     for train_words, test_words, test in datasets:
-        rnn = neural_models.RNN(epochs=FLAGS.epochs)
+        rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size)
         rnn.train(train_words)
         micro.append(rnn.accuracy(' '.join(test_words), unwanted_term=xxxx))
-        if not include_macro:
+        if FLAGS.averaging not in {"macro", "both"}:
             continue
         macro.append(test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words))).mean())
     return micro, macro
@@ -129,6 +130,8 @@ def stopwords_analysis(datasets):
     lms = train_the_ngram_lms(train_words)
     for n in lms:
         micro_ac = accuracy(words=test_words, lm=lms[n], lexicon=stopwords)
+        if FLAGS.averaging not in {"macro", "both"}:
+            print(f"{n} \t {100 * micro_ac:.2f}")
         macro_ac = test.WORDS.apply(lambda words: accuracy(words=words, lm=lms[n], lexicon=stopwords)).mean()
         print(f"{n} \t {100 * micro_ac:.2f} \t {100 * macro_ac:.2f}")
 
@@ -178,7 +181,7 @@ def main(argv):
                   f"{100 * np.mean(acc['macro'][n]):.2f} ± {100*sem(acc['macro'][n]):.2f}\\\\")
 
     if FLAGS.method == "neural":
-        micro, macro = assess_lstmlm(datasets, include_macro=True)
+        micro, macro = assess_lstmlm(datasets)
         print(f"micro:{np.mean(micro)} ± {sem(micro)}, macro:{np.mean(macro)} ± {sem(macro)}")
 
     if FLAGS.stopwords_only == 1:

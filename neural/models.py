@@ -51,9 +51,8 @@ class RNN:
         self.model.fit(x, y, validation_split=self.split, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
 
     def text_to_sequences(self, text):
-        self.tokenizer = Tokenizer()
+        self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token="UNK", lower=False)
         self.tokenizer.fit_on_texts([text])
-        self.vocab_size = len(self.tokenizer.word_index) + 1
         self.i2w = {index: word for word, index in self.tokenizer.word_index.items()}
         print('Vocabulary Size: %d' % self.vocab_size)
         encoded = self.tokenizer.texts_to_sequences([text])[0]
