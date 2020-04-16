@@ -37,6 +37,7 @@ flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cr
 flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default).")
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
 flags.DEFINE_integer("min_word_freq", 10, "Any words with frequency less than that are masked and ignored.")
+flags.DEFINE_integer("max_chars", 10000, "Use only texts with less characters than this number.")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -58,8 +59,8 @@ def parse_data(dataset):
             data.TEXT = data[FLAGS.section_name]
     elif dataset == MIMIC:
         data = pd.read_csv("./DATA/NOTEEVENTS.csv.gz")
-        # Using only reports about Radiology here
         data = data[data.CATEGORY == FLAGS.report_type]
+        data = data[data.TEXT.apply(len) < FLAGS.max_chars]
         if FLAGS.section_name is not None:
             # Use only a section from each report
             assert FLAGS.section_name in {"indication", "comparison", "findings", "impression"}
@@ -176,11 +177,6 @@ def main(argv):
     print(f"# words: {dist.mean()} ± {dist.std()} and max: {dist.max()}")
     words = Counter(data.WORDS.sum())
     print(words.most_common(10))
-
-    if dist.max() > 2000:
-        # cut very long texts
-        maxlen = int(dist.mean() + 2 * dist.std())
-        data.WORDS = data.WORDS.apply(lambda words: words[-maxlen:])
 
     if FLAGS.method == "explore":
         return
