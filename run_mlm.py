@@ -24,7 +24,7 @@ flags.DEFINE_string("section_name", None, "Valid only for IUXRay. Focus to a sin
                                           "'impression', 'findings', 'comparison', 'indication'. Default is None.")
 flags.DEFINE_string("report_type", "Radiology", "Valid only for MIMIC-III. Examples: 'Radiology', 'Discharge summary'."
                                                 "Default is 'Radiology'.")
-flags.DEFINE_integer("test_size", 100, "Test size.")
+flags.DEFINE_integer("test_size", 200, "Test size.")
 flags.DEFINE_integer("vocab_size", 1000, "The size of the vocabulary; rare words are discarded.")
 flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
 flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
@@ -36,7 +36,7 @@ flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
 flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default).")
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
-flags.DEFINE_integer("min_word_freq", 5, "Any words with frequency less than that are masked and ignored.")
+flags.DEFINE_integer("min_word_freq", 10, "Any words with frequency less than that are masked and ignored.")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -179,7 +179,7 @@ def main(argv):
 
     if dist.max() > 2000:
         # cut very long texts
-        maxlen = dist.mean() + 2 * dist.std()
+        maxlen = int(dist.mean() + 2 * dist.std())
         data.WORDS = data.WORDS.apply(lambda words: words[-maxlen:])
 
     if FLAGS.method == "explore":
