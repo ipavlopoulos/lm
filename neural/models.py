@@ -21,12 +21,14 @@ class RNN:
     plato = urlopen("http://www.gutenberg.org/cache/epub/1497/pg1497.txt").read().decode("utf8")
     rnn_lm.train(plato)
     """
-    def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50, window=3):
+    def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50,
+                 window=3, max_seq_len=1000):
         self.batch_size = batch_size
         self.epochs = epochs
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
         self.window = window
+        self.max_seq_len = max_seq_len
         self.stacks = stacks
         self.vocab_size = vocab_size
         self.split = split
@@ -49,8 +51,8 @@ class RNN:
         self.build()
         self.model.fit(x, y, validation_split=self.split, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
 
-    def text_to_sequences(self, text):
-        self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token="UNK", lower=False)
+    def text_to_sequences(self, text, max_seq_len=1000):
+        self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token="oov", lower=False)
         self.tokenizer.fit_on_texts([text])
         self.i2w = {index: word for word, index in self.tokenizer.word_index.items()}
         print('Vocabulary Size: %d' % self.vocab_size)
@@ -61,7 +63,7 @@ class RNN:
             sequence = encoded[i - self.window:i + self.window]
             sequences.append(np.array(sequence))
         print('Total Sequences: %d' % len(sequences))
-        sequences = np.array(sequences)
+        sequences = np.array(sequences[:max_seq_len])
         # let the last token from each window be the target
         X, y = sequences[:,:-1], sequences[:,-1]
         # turn y to onehot
@@ -76,6 +78,7 @@ class RNN:
         if context_encoded.ndim == 1:
             context_encoded = np.array([context_encoded])
         predicted_index = self.model.predict_classes(context_encoded, verbose=0)
+        # todo: change the above to the suggested np.argmax(model.predict(x), axis=-1)
         # map predicted word index to word
         next_word = self.i2w[predicted_index[0]]
         return next_word
