@@ -22,13 +22,13 @@ class RNN:
     rnn_lm.train(plato)
     """
     def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50,
-                 window=3, max_seq_len=1000):
+                 window=3, max_steps=100000):
         self.batch_size = batch_size
         self.epochs = epochs
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
         self.window = window
-        self.max_seq_len = max_seq_len
+        self.max_steps = max_steps
         self.stacks = stacks
         self.vocab_size = vocab_size
         self.split = split
@@ -51,7 +51,7 @@ class RNN:
         self.build()
         self.model.fit(x, y, validation_split=self.split, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
 
-    def text_to_sequences(self, text, max_seq_len=1000):
+    def text_to_sequences(self, text):
         self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token="oov", lower=False)
         self.tokenizer.fit_on_texts([text])
         self.i2w = {index: word for word, index in self.tokenizer.word_index.items()}
@@ -59,11 +59,11 @@ class RNN:
         encoded = self.tokenizer.texts_to_sequences([text])[0]
         sequences = list()
         # create equally-sized windows
-        for i in range(self.window, len(encoded)-self.window):
+        for i in range(self.window, min(self.max_steps, len(encoded) - self.window)):
             sequence = encoded[i - self.window:i + self.window]
             sequences.append(np.array(sequence))
         print('Total Sequences: %d' % len(sequences))
-        sequences = np.array(sequences[:max_seq_len])
+        sequences = np.array(sequences)
         # let the last token from each window be the target
         X, y = sequences[:,:-1], sequences[:,-1]
         # turn y to onehot
