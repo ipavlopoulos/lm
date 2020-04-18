@@ -38,6 +38,8 @@ flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
 flags.DEFINE_integer("min_word_freq", 10, "Any words with frequency less than that are masked and ignored.")
 flags.DEFINE_integer("max_chars", 10000, "Use only texts with less characters than this number.")
+flags.DEFINE_integer("save_datasets", 0, "Whether to save the datasets (1), sampled but not pre-processed.")
+
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -74,10 +76,11 @@ def parse_data(dataset):
         print(f"Reducing the data, which originally had {data.shape[0]} texts included.")
         data = data.sample(FLAGS.dataset_size, random_state=42)
         print(f"New dataset size: {data.shape[0]}")
+    if FLAGS.save_datasets:
+        data.to_csv(f"{dataset}.{FLAGS.report_type[:5].lower()}.csv", index=False)
     if FLAGS.preprocess == 1:
         data.TEXT = data.TEXT.apply(dedeidentify)
         data.TEXT = data.TEXT.apply(preprocess)
-        # todo: apply a maximum length
     data["WORDS"] = data.TEXT.str.split()
     return data
 
