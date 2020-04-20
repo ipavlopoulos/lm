@@ -111,7 +111,9 @@ def assess_rnnlm(datasets):
     for train_words, test_words, test in datasets:
         rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
         rnn.train(train_words)
-        micro.append(rnn.accuracy(' '.join(test_words), unwanted_term=xxxx))
+        acc = rnn.accuracy(' '.join(test_words), unwanted_term=xxxx)
+        micro.append(acc)
+        print(f"Accuracy per split: {acc}")
         if FLAGS.averaging not in {"macro", "both"}:
             continue
         macro.append(test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words))).mean())
