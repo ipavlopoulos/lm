@@ -22,7 +22,7 @@ class RNN:
     rnn_lm.train(plato)
     """
     def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50,
-                 window=3, max_steps=100000):
+                 window=3, max_steps=10000000):
         self.batch_size = batch_size
         self.epochs = epochs
         self.hidden_size = hidden_size
