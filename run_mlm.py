@@ -30,7 +30,7 @@ flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
 flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
 flags.DEFINE_integer("dataset_size", 2928, "The size of the dataset. Default is the small size of iuxray. Assign a "
                                            "large integer to have it in full (e.g., 1000000).")
-flags.DEFINE_string("method", "neural", "One of neural/ngrams/explore.")
+flags.DEFINE_string("method", "explore", "One of lstm/gru/counts/explore.")
 flags.DEFINE_integer("explore_vocab_sensitivity", 0, "Whether to run N-Grams w.r.t. vocabulary size (1) or not (0).")
 flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
@@ -105,11 +105,11 @@ def assess_nglms(datasets, kappas=range(1, 9)):
     return acc
 
 
-def assess_lstmlm(datasets):
+def assess_rnnlm(datasets):
     print("Setting up the RNNLM...")
     micro, macro = [], []
     for train_words, test_words, test in datasets:
-        rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size)
+        rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
         rnn.train(train_words)
         micro.append(rnn.accuracy(' '.join(test_words), unwanted_term=xxxx))
         if FLAGS.averaging not in {"macro", "both"}:
@@ -201,7 +201,7 @@ def main(argv):
             test_words = [w if w in vocab else oov for w in test_words]
         datasets.append((train_words, test_words, test))
 
-    if FLAGS.method == "ngrams":
+    if FLAGS.method == "counts":
         # print("Evaluating N-Grams on the test...")
         acc = assess_nglms(datasets)
         for n in range(1, 9):
@@ -211,8 +211,8 @@ def main(argv):
                   f"\\\\"
                   )
 
-    if FLAGS.method == "neural":
-        micro, macro = assess_lstmlm(datasets)
+    if FLAGS.method in {"lstm", "gru"}:
+        micro, macro = assess_rnnlm(datasets)
         print(f"micro:{np.mean(micro)} ± {sem(micro)}, macro:{np.mean(macro)} ± {sem(macro)}")
 
     if FLAGS.stopwords_only == 1:

@@ -4,7 +4,7 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Embedding
+from tensorflow.keras.layers import Dense, LSTM, GRU, Embedding
 
 
 def get_plato_rnn():
@@ -22,11 +22,12 @@ class RNN:
     rnn_lm.train(plato)
     """
     def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50,
-                 window=3, max_steps=10000000):
+                 window=3, max_steps=10000000, use_gru=False):
         self.batch_size = batch_size
         self.epochs = epochs
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
+        self.use_gru = use_gru
         self.window = window
         self.max_steps = max_steps
         self.stacks = stacks
@@ -39,9 +40,10 @@ class RNN:
     def build(self):
         self.model = Sequential()
         self.model.add(Embedding(self.vocab_size, 200, input_length=2*self.window-1))
+        RnnCell = GRU if self.use_gru else LSTM
         for stack in range(self.stacks):
-            self.model.add(LSTM(self.hidden_size, return_sequences=True))
-        self.model.add(LSTM(self.hidden_size))
+            self.model.add(RnnCell(self.hidden_size, return_sequences=True))
+        self.model.add(RnnCell(self.hidden_size))
         self.model.add(Dense(self.output_mlp_size, activation='relu'))
         self.model.add(Dense(self.vocab_size, activation='softmax'))
         self.model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
