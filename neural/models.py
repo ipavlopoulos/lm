@@ -170,6 +170,7 @@ class RNN:
                 scores.append(0)
                 continue
             context_encoded = encoded[i-history:i]
-            predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
+            #predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
+            predicted = np.argmax(self.model.predict([context_encoded], verbose=0), axis=-1)
             scores.append(1 if target == predicted else 0)
         return np.mean(scores)
