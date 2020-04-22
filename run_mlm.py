@@ -141,9 +141,9 @@ def main(argv):
             rnn.train(train_words)
             acc, kf = rnn.accuracy(' '.join(test_words), unwanted_term=xxxx)
             accs.append(acc)
-            keys.append(kf)
+            keystrokes.append(kf)
         print(f"Micro Accuracy:{np.mean(accs)} ± {sem(accs)}")
-        print(f"Keystrokes:{np.mean(keys)} ± {sem(keys)}")
+        print(f"Keystrokes:{np.mean(keystrokes)} ± {sem(keystrokes)}")
 
 
 if __name__ == "__main__":
