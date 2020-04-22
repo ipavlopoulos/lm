@@ -4,6 +4,20 @@ import re
 xxxx = "xxxx"
 oov = "oov"
 
+# Use the word list from https://www.textfixer.com/tutorials/common-english-words.txt
+stopwords = {"i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself",
+             "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its",
+             "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this",
+             "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has",
+             "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or",
+             "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between",
+             "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in",
+             "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when",
+             "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some",
+             "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can",
+             "will", "just", "don", "should", "now"}
+
+
 def fill_unk(lexicon, words_to_fill, pseudo="UNK"):
     """
     Fill rare words with UNK
@@ -37,29 +51,37 @@ def preprocess(text):
     return text
 
 
-def accuracy(words, lm, lexicon=None, ignore_xxxx=True):
+def accuracy(words, lm):
     """
     Accuracy in next word prediction. That is the percent of words predicted correctly (a.k.a. MRR1)
-    given the ground truth history
+    given the ground truth history. Also, return the fraction of keystrokes using assistance to ones not.
 
-    :param ignore_xxxx: Ignore the de-identification symbol from the errors.
     :param words: the text words
     :param lm: the model
-    :param lexicon: score only words from this lexicon (set, by default empty)
-    :return: the score
+    :return: accuracy, keystrokes fraction
     """
     results = []
+    strokes, strokes_discounted = 0, 0
     for i in range(lm.n, len(words)):
         gold_word = words[i]
+        # fails in OOVs
         if gold_word == oov:
             results.append(0)
+            strokes_discounted += len(gold_word)
+            strokes += len(gold_word)
             continue
-        if ignore_xxxx and (xxxx in gold_word):
+        # ignore XXXXs
+        if xxxx in gold_word:
             continue
-        if lexicon is not None:
-            if gold_word not in lexicon:
-                continue
         history = words[i-lm.n:i]
         pred_word = lm.generate_next_gram(history)
-        results.append(1 if gold_word == pred_word else 0)# count the errors
-    return np.mean(results)
+        # save strokes when succeed
+        if gold_word == pred_word:
+            results.append(1)
+            strokes_discounted += 1.
+            strokes += len(gold_word)
+        else:
+            results.append(0)
+            strokes_discounted += len(gold_word)
+            strokes += len(gold_word)
+    return np.mean(results), 1-(strokes_discounted/strokes)

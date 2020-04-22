@@ -84,85 +84,6 @@ def parse_data(dataset):
     return data
 
 
-def train_the_ngram_lms(words, kappas=range(1, 9)):
-    models = {}
-    for K in kappas:
-        ngramlm = markov_models.LM(gram=markov_models.WORD, n=K).train(words)
-        models[K] = ngramlm
-    return models
-
-
-def assess_nglms(datasets, kappas=range(1, 9)):
-    acc = {k:[] for k in kappas}
-    for train_words, test_words in datasets:
-        # Assess the N-Gram-based LMs
-        lms = train_the_ngram_lms(train_words, kappas=kappas)
-        for n in lms:
-            acc[n].append(accuracy(test_words, lms[n]))
-    return acc
-
-
-def assess_rnnlm(datasets):
-    print("Setting up the RNNLM...")
-    micro = []
-    for train_words, test_words in datasets:
-        rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
-        rnn.train(train_words)
-        acc = rnn.accuracy(' '.join(test_words), unwanted_term=xxxx)
-        micro.append(acc)
-        print(f"Accuracy per split: {acc}")
-    return micro
-
-
-def stopwords_analysis(datasets):
-    train_words, test_words, test = datasets[-1]
-    # Study what happens when only stop words are used.
-    # Use the word list from https://www.textfixer.com/tutorials/common-english-words.txt
-    print("Exploring the use on Stop Words...")
-    stopwords = {"i", "me", "my", "myself", "we", "our", "ours", "ourselves", "you", "your", "yours", "yourself",
-                 "yourselves", "he", "him", "his", "himself", "she", "her", "hers", "herself", "it", "its",
-                 "itself", "they", "them", "their", "theirs", "themselves", "what", "which", "who", "whom", "this",
-                 "that", "these", "those", "am", "is", "are", "was", "were", "be", "been", "being", "have", "has",
-                 "had", "having", "do", "does", "did", "doing", "a", "an", "the", "and", "but", "if", "or",
-                 "because", "as", "until", "while", "of", "at", "by", "for", "with", "about", "against", "between",
-                 "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in",
-                 "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when",
-                 "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some",
-                 "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s", "t", "can",
-                 "will", "just", "don", "should", "now"}
-    print(f"Stop tokens are: {len([w for w in test_words if w in stopwords])} out of {len(test_words)} @test.")
-    lms = train_the_ngram_lms(train_words)
-    for n in lms:
-        micro_ac = accuracy(words=test_words, lm=lms[n], lexicon=stopwords)
-        print(f"{n} \t {100 * micro_ac:.2f}")
-
-
-def vocab_size_sensitivity(datasets, random_choise=-1):
-    """
-    Train N-Gram LMs (from a random split) and assess different usage.
-    That is, only assess words from a lexicon (as if the user was using this only to write stop words).
-    :param datasets:
-    :param random_choise:
-    :return:
-    """
-    train_words, test_words, test = datasets[random_choise]
-    lms = train_the_ngram_lms(train_words)
-    print("Investigating the effect of the vocabulary size (using a single split & micro ER)...")
-    # Study the effect of vocabulary size on the best performing 4-Gram-based LM
-    V = Counter(train_words)
-    vf_wer = {"V": [], "1-GLM": [], "2-GLM": [], "3-GLM": [], "4-GLM": [], "5-GLM": [], "6-GLM": [], "7-GLM": [],
-              "8-GLM": [], }
-    for f in range(50, len(V), 50):
-        vf, _ = zip(*V.most_common(f))
-        vf_wer["V"].append(f)
-        for i in range(1, 9):
-            vf_wer[f"{i}-GLM"].append(accuracy(test_words, lms[i], lexicon=vf))
-
-        vstudy = pd.DataFrame(vf_wer)
-        vstudy.to_csv(f"{FLAGS.dataset_name}.vstudy.csv", index=False)
-        # Plot as follows: >> ax = vstudy.plot(x="V"); ax.set(xlabel="Vocabulary size", ylabel="Error Rate")
-
-
 def main(argv):
 
     # load the data
@@ -196,19 +117,33 @@ def main(argv):
 
     if FLAGS.method == "counts":
         print(f"Evaluating N-Grams on {FLAGS.test_size} unseen words...")
-        acc = assess_nglms(datasets)
-        for n in range(1, 9):
-            print(f"{n}-GLM & {100 * np.mean(acc[n]):.2f} ± {100*sem(acc[n]):.2f} \\\\")
+        kappas = range(1, 9)
+        accs = {k: [] for k in kappas}
+        keys = {k: [] for k in kappas}
+        for train_words, test_words in datasets:
+            lms = {K:markov_models.LM(gram=markov_models.WORD, n=K).train(train_words) for K in kappas}
+            for n in lms:
+                acc, kf = accuracy(test_words, lms[n])
+                accs[n].append(acc)
+                keys[n].append(kf)
+
+        for K in kappas:
+            print(f"Micro Accuracy({K}-GLM) & {100 * np.mean(accs[K]):.2f} ± {100*sem(accs[K]):.2f} \\\\")
+            print(f"Keystrokes({K}-GLM) & {100 * np.mean(keys[K]):.2f} ± {100*sem(keys[K]):.2f} \\\\")
+            print()
 
     if FLAGS.method in {"lstm", "gru"}:
-        micro = assess_rnnlm(datasets)
-        print(f"micro:{np.mean(micro)} ± {sem(micro)}")
-
-    if FLAGS.stopwords_only == 1:
-        stopwords_analysis(datasets)
-
-    if FLAGS.explore_vocab_sensitivity == 1:
-        vocab_size_sensitivity(datasets)
+        print("Setting up the RNNLM...")
+        accs, keystrokes = [], []
+        for train_words, test_words in datasets:
+            rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size,
+                                    use_gru=int(FLAGS.method == "gru"))
+            rnn.train(train_words)
+            acc, kf = rnn.accuracy(' '.join(test_words), unwanted_term=xxxx)
+            accs.append(acc)
+            keys.append(kf)
+        print(f"Micro Accuracy:{np.mean(accs)} ± {sem(accs)}")
+        print(f"Keystrokes:{np.mean(keys)} ± {sem(keys)}")
 
 
 if __name__ == "__main__":
