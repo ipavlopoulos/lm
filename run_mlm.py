@@ -105,7 +105,7 @@ def assess_nglms(datasets, kappas=range(1, 9)):
 def assess_rnnlm(datasets):
     print("Setting up the RNNLM...")
     micro = []
-    for train_words, test_words, test in datasets:
+    for train_words, test_words in datasets:
         rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
         rnn.train(train_words)
         acc = rnn.accuracy(' '.join(test_words), unwanted_term=xxxx)
