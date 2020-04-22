@@ -161,6 +161,7 @@ class RNN:
         encoded = self.tokenizer.texts_to_sequences([text])[0]
         history = 2 * self.window - 1
         scores = []
+        keystrokes, keystrokes_discounted = 0,0
         for i in range(history, len(encoded)):
             target = encoded[i]
             target_word = self.i2w[target]
@@ -168,9 +169,18 @@ class RNN:
                 continue
             if target_word == oov:
                 scores.append(0)
+                keystrokes += len(target_word)
+                keystrokes_discounted += len(target_word)
                 continue
             context_encoded = encoded[i-history:i]
             #predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
             predicted = np.argmax(self.model.predict([context_encoded], verbose=0), axis=-1)
-            scores.append(1 if target == predicted else 0)
-        return np.mean(scores)
+            if target == predicted:
+                scores.append(1)
+                keystrokes += len(target_word)
+                keystrokes_discounted += 1
+            else:
+                scores.append(0)
+                keystrokes += len(target_word)
+                keystrokes_discounted += len(target_word)
+        return np.mean(scores), 1-(keystrokes_discounted/keystrokes)
