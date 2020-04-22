@@ -184,7 +184,7 @@ def main(argv):
     # create the MC sampled data sets
     datasets = []
     for i in range(FLAGS.repetitions):
-        train_test = data.sample(FLAGS.dataset_size).WORDS.sum()
+        train_test = data.sample(FLAGS.dataset_size, random_state=42+i).WORDS.sum()
         train_words = train_test[:-FLAGS.test_size]
         test_words = train_test[-FLAGS.test_size:] # last words
         if FLAGS.min_word_freq > 0:
