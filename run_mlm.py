@@ -24,7 +24,7 @@ flags.DEFINE_string("section_name", None, "Valid only for IUXRay. Focus to a sin
                                           "'impression', 'findings', 'comparison', 'indication'. Default is None.")
 flags.DEFINE_string("report_type", "Radiology", "Valid only for MIMIC-III. Examples: 'Radiology', 'Discharge summary'."
                                                 "Default is 'Radiology'.")
-flags.DEFINE_integer("test_size", 200, "Test size.")
+flags.DEFINE_integer("test_size", 10000, "Number of words to test.")
 flags.DEFINE_integer("vocab_size", 1000, "The size of the vocabulary; rare words are discarded.")
 flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
 flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
@@ -34,7 +34,6 @@ flags.DEFINE_string("method", "explore", "One of lstm/gru/counts/explore.")
 flags.DEFINE_integer("explore_vocab_sensitivity", 0, "Whether to run N-Grams w.r.t. vocabulary size (1) or not (0).")
 flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
-flags.DEFINE_string("averaging", "both", "Micro/macro averaging or both (default).")
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
 flags.DEFINE_integer("min_word_freq", 10, "Any words with frequency less than that are masked and ignored.")
 flags.DEFINE_integer("max_chars", 10000, "Use only texts with less characters than this number.")
@@ -94,30 +93,25 @@ def train_the_ngram_lms(words, kappas=range(1, 9)):
 
 
 def assess_nglms(datasets, kappas=range(1, 9)):
-    acc = {"micro": {k:[] for k in kappas}, "macro":{k:[] for k in kappas}}
-    for train_words, test_words, test in datasets:
+    acc = {k:[] for k in kappas}
+    for train_words, test_words in datasets:
         # Assess the N-Gram-based LMs
         lms = train_the_ngram_lms(train_words, kappas=kappas)
         for n in lms:
-            acc["micro"][n].append(accuracy(test_words, lms[n]))
-            if FLAGS.averaging in {"macro", "both"}:
-                acc["macro"][n].append(test.WORDS.apply(lambda words: accuracy(words, lms[n])).mean())
+            acc[n].append(accuracy(test_words, lms[n]))
     return acc
 
 
 def assess_rnnlm(datasets):
     print("Setting up the RNNLM...")
-    micro, macro = [], []
+    micro = []
     for train_words, test_words, test in datasets:
         rnn = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
         rnn.train(train_words)
         acc = rnn.accuracy(' '.join(test_words), unwanted_term=xxxx)
         micro.append(acc)
         print(f"Accuracy per split: {acc}")
-        if FLAGS.averaging not in {"macro", "both"}:
-            continue
-        macro.append(test.WORDS.apply(lambda words: rnn.accuracy(" ".join(words))).mean())
-    return micro, macro
+    return micro
 
 
 def stopwords_analysis(datasets):
@@ -140,10 +134,7 @@ def stopwords_analysis(datasets):
     lms = train_the_ngram_lms(train_words)
     for n in lms:
         micro_ac = accuracy(words=test_words, lm=lms[n], lexicon=stopwords)
-        if FLAGS.averaging not in {"macro", "both"}:
-            print(f"{n} \t {100 * micro_ac:.2f}")
-        macro_ac = test.WORDS.apply(lambda words: accuracy(words=words, lm=lms[n], lexicon=stopwords)).mean()
-        print(f"{n} \t {100 * micro_ac:.2f} \t {100 * macro_ac:.2f}")
+        print(f"{n} \t {100 * micro_ac:.2f}")
 
 
 def vocab_size_sensitivity(datasets, random_choise=-1):
@@ -193,29 +184,25 @@ def main(argv):
     # create the MC sampled data sets
     datasets = []
     for i in range(FLAGS.repetitions):
-        train, test = train_test_split(data, test_size=FLAGS.test_size, random_state=42)
-        train_words = train.WORDS.sum()  # " ".join(train.TEXT.to_list()).split()
-        test_words = test.WORDS.sum()
+        train_test = data.sample(FLAGS.dataset_size).WORDS.sum()
+        train_words = train_test[:-FLAGS.test_size]
+        test_words = train_test[-FLAGS.test_size:] # last words
         if FLAGS.min_word_freq > 0:
             # mask rare words
             vocab = {w for w, f in Counter(train_words).items() if f > FLAGS.min_word_freq}
             train_words = [w if w in vocab else oov for w in train_words]
             test_words = [w if w in vocab else oov for w in test_words]
-        datasets.append((train_words, test_words, test))
+        datasets.append((train_words, test_words))
 
     if FLAGS.method == "counts":
-        # print("Evaluating N-Grams on the test...")
+        print(f"Evaluating N-Grams on {FLAGS.test_size} unseen words...")
         acc = assess_nglms(datasets)
         for n in range(1, 9):
-            print(f"{n}-GLM & " +
-                  f"{100 * np.mean(acc['micro'][n]):.2f} ± {100*sem(acc['micro'][n]):.2f} &" +
-                  (f"{100 * np.mean(acc['macro'][n]):.2f} ± {100*sem(acc['macro'][n]):.2f} " if FLAGS.averaging in {"macro", "both"} else "") +
-                  f"\\\\"
-                  )
+            print(f"{n}-GLM & {100 * np.mean(acc[n]):.2f} ± {100*sem(acc[n]):.2f} \\\\")
 
     if FLAGS.method in {"lstm", "gru"}:
-        micro, macro = assess_rnnlm(datasets)
-        print(f"micro:{np.mean(micro)} ± {sem(micro)}, macro:{np.mean(macro)} ± {sem(macro)}")
+        micro = assess_rnnlm(datasets)
+        print(f"micro:{np.mean(micro)} ± {sem(micro)}")
 
     if FLAGS.stopwords_only == 1:
         stopwords_analysis(datasets)
