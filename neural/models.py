@@ -5,7 +5,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, GRU, Embedding
-
+import gpt_2_simple as gpt2
+import os
 
 def get_plato_rnn():
     from urllib.request import urlopen
@@ -184,3 +185,32 @@ class RNN:
                 keystrokes += len(target_word)
                 keystrokes_discounted += len(target_word)
         return np.mean(scores), 1-(keystrokes_discounted/keystrokes)
+
+
+class GPT:
+
+    def __init__(self, texts, steps=1000, model_name="124M"):
+        gpt2.download_gpt2(model_name=model_name)
+        self.sess = gpt2.start_tf_sess()
+        self.steps = steps
+        self.model_name = model_name
+        self.tmp_data_path = ".gpt2"
+        self.data_name = "texts.raw.txt"
+        os.mkdir(self.tmp_data_path)
+        texts = [f"<|startoftext|>{t}<|endoftext|>" for t in texts]
+        with open(f"{self.tmp_data_path}/{self.data_name}", "w") as o:
+            o.write("".join(texts))
+
+    def train(self):
+        gpt2.finetune(self.sess,
+                      dataset=f"{self.tmp_data_path}/{self.data_name}",
+                      steps=self.steps,
+                      model_name=self.model_name,
+                      restore_from='fresh',
+                      print_every=10,
+                      sample_every=200,
+                      overwrite=True)
+
+    def generate_text(self, seed=""):
+        single_text = gpt2.generate(self.sess, return_as_list=True, prefix=seed)[0]
+        print(single_text)
