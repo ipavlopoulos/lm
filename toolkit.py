@@ -51,7 +51,7 @@ def preprocess(text):
     return text
 
 
-def accuracy(words, lm):
+def accuracy(words, lm, lexicon={}):
     """
     Accuracy in next word prediction. That is the percent of words predicted correctly (a.k.a. MRR1)
     given the ground truth history. Also, return the fraction of keystrokes using assistance to ones not.
@@ -65,7 +65,7 @@ def accuracy(words, lm):
     for i in range(lm.n, len(words)):
         gold_word = words[i]
         # fails in OOVs
-        if gold_word == oov:
+        if (gold_word == oov) or (len(lexicon)>0 and (gold_word not in lexicon)):
             results.append(0)
             strokes_discounted += len(gold_word)
             strokes += len(gold_word)

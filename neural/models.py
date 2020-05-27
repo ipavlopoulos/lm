@@ -28,6 +28,7 @@ class RNN:
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
         self.use_gru = use_gru
+        self.name = "rnn"
         self.window = window
         self.max_steps = max_steps
         self.stacks = stacks
@@ -151,7 +152,7 @@ class RNN:
         ce = -np.mean(log_probs)
         return np.power(2, ce) if PPL else ce
 
-    def accuracy(self, text, unwanted_term="xxxx", oov="oov"):
+    def accuracy(self, text, unwanted_term="xxxx", oov="oov", lexicon={}):
         """
         Accuracy of predicting the observed grams.
         :param unwanted_term: if this term is included in a word, ignore.
@@ -167,7 +168,7 @@ class RNN:
             target_word = self.i2w[target]
             if unwanted_term in target_word:
                 continue
-            if target_word == oov:
+            if target_word == oov or (len(lexicon)>0 and (target_word not in lexicon)):
                 scores.append(0)
                 keystrokes += len(target_word)
                 keystrokes_discounted += len(target_word)

@@ -32,7 +32,7 @@ flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
 flags.DEFINE_integer("dataset_size", 2928, "The size of the dataset. Default is the small size of iuxray. Assign a "
                                            "large integer to have it in full (e.g., 1000000).")
 flags.DEFINE_string("method", "explore", "One of lstm/gru/counts/explore.")
-flags.DEFINE_integer("explore_vocab_sensitivity", 0, "Whether to run N-Grams w.r.t. vocabulary size (1) or not (0).")
+flags.DEFINE_integer("explore_vocab_sensitivity", 0, "Whether to asses 4GLM (1) GRU (2) or none (0).")
 flags.DEFINE_integer("stopwords_only", 0, "Evaluate only stopwords (1) or pass (0, default).")
 flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cross Validation.")
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
@@ -94,6 +94,21 @@ def parse_data(dataset):
     return data
 
 
+def vocab_size_sensitivity(train_words, test_words, lm):
+    vocabulary = Counter(train_words)
+    results = {"V": [], "Accuracy": [], "KD": []}
+    for f in range(50, len(vocabulary), 50):
+        results["V"].append(f)
+        lexicon, _ = zip(*vocabulary.most_common(f))
+        lexicon = set(lexicon)
+        acc, kd = accuracy(test_words, lm, lexicon) if "gram" in lm.name else lm.accuracy(" ".join(test_words))
+        results[f"Accuracy"].append(acc)
+        results[f"KD"].append(kd)
+    results_pd = pd.DataFrame(results)
+    results_pd.to_csv(f"{FLAGS.dataset_name}.{lm.name}.vocabulary_study.csv", index=False)
+    return results_pd
+
+
 def main(argv):
 
     # load the data
@@ -111,7 +126,8 @@ def main(argv):
     print(words.most_common(10))
 
     if FLAGS.method == "explore":
-        return
+        if FLAGS.explore_vocab_sensitivity == 0:
+            return
 
     # perform some exploratory analysis
     # count words and tokens
@@ -159,6 +175,17 @@ def main(argv):
             keystrokes.append(kf)
         print(f"Micro Accuracy:{np.mean(accs)} ± {sem(accs)}")
         print(f"Keystrokes:{np.mean(keystrokes)} ± {sem(keystrokes)}")
+
+    if FLAGS.explore_vocab_sensitivity != 0:
+        print("Exploring different Vocabulary sizes...")
+        train_words, test_words = datasets[-1]
+        if FLAGS.explore_vocab_sensitivity == 1:
+            lm = markov_models.LM(gram=markov_models.WORD, n=3).train(train_words)
+        elif FLAGS.explore_vocab_sensitivity == 2:
+            lm = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
+            lm.train(train_words)
+
+        _ = vocab_size_sensitivity(train_words, test_words, lm)
 
 
 if __name__ == "__main__":
