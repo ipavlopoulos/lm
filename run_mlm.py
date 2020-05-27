@@ -38,10 +38,16 @@ flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeli
 flags.DEFINE_integer("min_word_freq", 10, "Any words with frequency less than that are masked and ignored.")
 flags.DEFINE_integer("max_chars", 10000, "Use only texts with less characters than this number.")
 flags.DEFINE_integer("save_datasets", 0, "Whether to save the datasets (1), sampled but not pre-processed.")
+flags.DEFINE_integer("load_datasets", 0, "Whether to load saved  datasets.")
 
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
+
+
+def load_data(name):
+    assert FLAGS.load_datasets
+    return pd.read_csv(f"{name}.{FLAGS.report_type[:5].lower()}.csv.gz")
 
 
 def parse_data(dataset):
@@ -52,7 +58,7 @@ def parse_data(dataset):
     """
     assert dataset in {IUXRAY, MIMIC}
     if dataset == IUXRAY:
-        data = pd.read_csv(f"./DATA/iuxray.csv")
+        data = pd.read_csv(f"./DATA/iuxray.csv.gz")
         data["TEXT"] = data.indication + data.comparison + data.findings + data.impression
         if FLAGS.section_name is not None:
             # Use only a section from each report
@@ -75,19 +81,25 @@ def parse_data(dataset):
         print(f"Reducing the data, which originally had {data.shape[0]} texts included.")
         data = data.sample(FLAGS.dataset_size, random_state=42)
         print(f"New dataset size: {data.shape[0]}")
-    if FLAGS.save_datasets:
-        data.to_csv(f"{dataset}.{FLAGS.report_type[:5].lower()}.csv", index=False)
     if FLAGS.preprocess == 1:
         data.TEXT = data.TEXT.apply(dedeidentify)
         data.TEXT = data.TEXT.apply(preprocess)
     data["WORDS"] = data.TEXT.str.split()
+    if FLAGS.save_datasets == 1:
+        print("Saving the data...")
+        data.to_csv(f"{dataset}.{FLAGS.report_type[:5].lower()}.csv", index=False)
     return data
 
 
 def main(argv):
 
     # load the data
-    data = parse_data(FLAGS.dataset_name)
+    if FLAGS.load_datasets:
+        data = load_data(FLAGS.dataset_name)
+    else:
+        data = parse_data(FLAGS.dataset_name)
+
+    print("Data loaded...")
 
     # exploratory analysis
     dist = data.WORDS.apply(len)
