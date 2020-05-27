@@ -18,6 +18,7 @@ from scipy.stats import sem
 from toolkit import *
 from collections import Counter
 from absl import flags, logging, app
+from ast import literal_eval
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("section_name", None, "Valid only for IUXRay. Focus to a single section of the report. Examples:"
@@ -47,7 +48,9 @@ MIMIC = "mimic"
 
 def load_data(name):
     assert FLAGS.load_datasets
-    return pd.read_csv(f"{name}.{FLAGS.report_type[:5].lower()}.csv.gz")
+    data = pd.read_csv(f"{name}.{FLAGS.report_type[:5].lower()}.csv.gz")
+    data.WORDS = data.WORDS.apply(literal_eval)
+    return data
 
 
 def parse_data(dataset):
