@@ -188,15 +188,25 @@ class RNN:
 
 
 class GPT:
+    """ Using gpt-2-simple (https://github.com/minimaxir/gpt-2-simple)"""
 
-    def __init__(self, texts, steps=1000, model_name="124M"):
-        gpt2.download_gpt2(model_name=model_name)
+    def __init__(self, texts, steps=1000, model_name="124M", download=False):
+        """
+        Use GPT2 to generate next words
+        :param texts: list of texts
+        :param steps: number of steps to fine tune
+        :param model_name: 124 for small
+        :param download: set to True the first time to download models
+        """
+        if download:
+            gpt2.download_gpt2(model_name=model_name)
         self.sess = gpt2.start_tf_sess()
         self.steps = steps
         self.model_name = model_name
         self.tmp_data_path = ".gpt2"
         self.data_name = "texts.raw.txt"
         os.mkdir(self.tmp_data_path)
+        # todo: to affect training, provide terms before |startoftext|, e.g., <|sob|>none<|eob|>...
         texts = [f"<|startoftext|>{t}<|endoftext|>" for t in texts]
         with open(f"{self.tmp_data_path}/{self.data_name}", "w") as o:
             o.write("".join(texts))
@@ -214,3 +224,11 @@ class GPT:
     def generate_text(self, seed=""):
         single_text = gpt2.generate(self.sess, return_as_list=True, prefix=seed)[0]
         print(single_text)
+
+    def generate_next_word(self, text):
+        words = text.split()
+        for i,word in enumerate(words):
+            if i == 0: continue
+            context = words[:i]
+            w = gpt2.generate(self.sess, return_as_list=True, prefix=context, length=1)[0]
+            print(w, word)
