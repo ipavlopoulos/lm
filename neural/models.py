@@ -152,11 +152,14 @@ class RNN:
         ce = -np.mean(log_probs)
         return np.power(2, ce) if PPL else ce
 
-    def accuracy(self, text, unwanted_term="xxxx", oov="oov", lexicon={}):
+    def accuracy(self, text, unwanted_term="xxxx", oov="oov", lexicon={}, relative_kd=True):
         """
         Accuracy of predicting the observed grams.
+        :param oov:
         :param unwanted_term: if this term is included in a word, ignore.
         :param text: The text to compute the Accuracy.
+        :param relative_kd: if true return keystroke reduction (%), else return (# keystrokes w/, w/o)
+        :param lexicon: limited vocabulary to be used during evaluation
         :return: A float number; the higher the better.
         """
         encoded = self.tokenizer.texts_to_sequences([text])[0]
@@ -174,7 +177,6 @@ class RNN:
                 keystrokes_discounted += len(target_word)
                 continue
             context_encoded = encoded[i-history:i]
-            #predicted = self.model.predict_classes([context_encoded], verbose=0)[0]
             predicted = np.argmax(self.model.predict([context_encoded], verbose=0), axis=-1)
             if target == predicted:
                 scores.append(1)
@@ -184,4 +186,4 @@ class RNN:
                 scores.append(0)
                 keystrokes += len(target_word)
                 keystrokes_discounted += len(target_word)
-        return np.mean(scores), 1-(keystrokes_discounted/keystrokes)
+        return np.mean(scores), 1-(keystrokes_discounted/keystrokes) if relative_kd else (keystrokes_discounted, keystrokes)

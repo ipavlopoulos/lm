@@ -96,14 +96,15 @@ def parse_data(dataset):
 
 def vocab_size_sensitivity(train_words, test_words, lm):
     vocabulary = Counter(train_words)
-    results = {"V": [], "Accuracy": [], "KD": []}
+    results = {"V": [], "Accuracy": [], "KD": [], "K": []}
     for f in range(50, len(vocabulary), 50):
         results["V"].append(f)
         lexicon, _ = zip(*vocabulary.most_common(f))
-        lexicon = set(lexicon)
-        acc, kd = accuracy(test_words, lm, lexicon) if "gram" in lm.name else lm.accuracy(" ".join(test_words))
+        acc, (kd, keystrokes) = accuracy(words=test_words, lm=lm, lexicon=set(lexicon), relative_kd=False) \
+            if "gram" in lm.name else lm.accuracy(" ".join(test_words), relative_kd=False)
         results[f"Accuracy"].append(acc)
         results[f"KD"].append(kd)
+        results[f"K"].append(keystrokes)
     results_pd = pd.DataFrame(results)
     results_pd.to_csv(f"{FLAGS.dataset_name}.{lm.name}.vocabulary_study.csv", index=False)
     return results_pd

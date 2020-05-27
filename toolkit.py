@@ -51,11 +51,13 @@ def preprocess(text):
     return text
 
 
-def accuracy(words, lm, lexicon={}):
+def accuracy(words, lm, lexicon={}, relative_kd=True):
     """
     Accuracy in next word prediction. That is the percent of words predicted correctly (a.k.a. MRR1)
     given the ground truth history. Also, return the fraction of keystrokes using assistance to ones not.
 
+    :param relative_kd: if true return keystroke reduction (%), else return (# keystrokes w/, w/o)
+    :param lexicon: limited vocabulary to be used during evaluation
     :param words: the text words
     :param lm: the model
     :return: accuracy, keystrokes fraction
@@ -84,4 +86,4 @@ def accuracy(words, lm, lexicon={}):
             results.append(0)
             strokes_discounted += len(gold_word)
             strokes += len(gold_word)
-    return np.mean(results), 1-(strokes_discounted/strokes)
+    return np.mean(results), 1-(strokes_discounted/strokes) if relative_kd else (strokes_discounted, strokes)
