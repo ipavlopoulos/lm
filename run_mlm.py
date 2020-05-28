@@ -101,7 +101,7 @@ def vocab_size_sensitivity(train_words, test_words, lm):
         results["V"].append(f)
         lexicon, _ = zip(*vocabulary.most_common(f))
         acc, (kd, keystrokes) = accuracy(words=test_words, lm=lm, lexicon=set(lexicon), relative_kd=False) \
-            if "gram" in lm.name else lm.accuracy(" ".join(test_words), relative_kd=False)
+            if "gram" in lm.name else lm.accuracy(" ".join(test_words), lexicon=set(lexicon), relative_kd=False)
         results[f"Accuracy"].append(acc)
         results[f"KD"].append(kd)
         results[f"K"].append(keystrokes)
