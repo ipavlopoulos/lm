@@ -94,10 +94,10 @@ def parse_data(dataset):
     return data
 
 
-def vocab_size_sensitivity(train_words, test_words, lm):
+def vocab_size_sensitivity(train_words, test_words, lm, step=150):
     vocabulary = Counter(train_words)
     results = {"V": [], "Accuracy": [], "KD": [], "K": []}
-    for f in range(50, len(vocabulary), 50):
+    for f in range(50, FLAGS.vocab_size, step):
         results["V"].append(f)
         lexicon, _ = zip(*vocabulary.most_common(f))
         acc, (kd, keystrokes) = accuracy(words=test_words, lm=lm, lexicon=set(lexicon), relative_kd=False) \
