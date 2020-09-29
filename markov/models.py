@@ -123,15 +123,20 @@ class LM:
         else:
             return self.vocabulary
 
-    def generate_next_gram(self, history):
+    def generate_next_gram(self, history, greedy=False, n=1):
         """
         Given an n-gram generate the following gram.
         :param history: A string or word list.
+        :param greedy: If true, returns greedily the next most probable next gram.
+        :param n: Number of grams to return. Only works with "greedy" and default is 1.
         :return: The next gram
         """
         ngram = history[-self.n:]
         # Compute a random number from 0 to 1.
         x = random.random()
+        # UNCHECKED
+        if greedy:
+            return self.get_next_grams(ngram)[:n]
         # For each following gram, sort based on freq,
         # and return the most likely gram to follow.
         for c, v in self.get_next_grams(ngram):
@@ -209,8 +214,10 @@ class NLTKLM:
         train, self.vocab = nltk.lm.preprocessing.padded_everygram_pipeline(self.ngrams_num, [self.preprocess(text)])
         self.model.fit(train, self.vocab)
 
-    def preprocess(self, text):
-        tokens = nltk.word_tokenize(text)
+    def tokenise(self, text):
+        return nltk.word_tokenize(text)
+
+    def preprocess(self, tokens):
         return list(nltk.lm.preprocessing.pad_both_ends(tokens, n=self.ngrams_num))
 
     def ppl(self, text):
