@@ -2,6 +2,9 @@ from collections import *
 import numpy as np
 import random
 import pickle
+#! pip install nltk==3.5
+#nltk.download('punkt')
+import nltk
 
 CHARACTER = "CHAR"
 WORD = "WORD"
@@ -120,15 +123,20 @@ class LM:
         else:
             return self.vocabulary
 
-    def generate_next_gram(self, history):
+    def generate_next_gram(self, history, greedy=False, n=1):
         """
         Given an n-gram generate the following gram.
         :param history: A string or word list.
+        :param greedy: If true, returns greedily the next most probable next gram.
+        :param n: Number of grams to return. Only works with "greedy" and default is 1.
         :return: The next gram
         """
         ngram = history[-self.n:]
         # Compute a random number from 0 to 1.
         x = random.random()
+        # UNCHECKED
+        if greedy:
+            return self.get_next_grams(ngram)[:n]
         # For each following gram, sort based on freq,
         # and return the most likely gram to follow.
         for c, v in self.get_next_grams(ngram):
@@ -186,3 +194,31 @@ class LM:
         :return:
         """
         return np.power(2, self.cross_entropy(text))
+
+
+class NLTKLM:
+
+    def __init__(self, ngrams_num=4, smoothing="mle"):
+        self.ngrams_num = ngrams_num
+        self.models = {#"lid": nltk.lm.Lidstone(order=ngrams_num, gamma=0.1),
+                       "lap": nltk.lm.Laplace(order=ngrams_num),
+                       "mle": nltk.lm.MLE(ngrams_num),
+                       "wbi": nltk.lm.WittenBellInterpolated(ngrams_num),
+                       "kni": nltk.lm.KneserNeyInterpolated(ngrams_num)
+                       }
+        assert smoothing in self.models
+        self.model = self.models[smoothing]
+        self.vocab = None
+
+    def train(self, text):
+        train, self.vocab = nltk.lm.preprocessing.padded_everygram_pipeline(self.ngrams_num, [self.preprocess(text)])
+        self.model.fit(train, self.vocab)
+
+    def tokenise(self, text):
+        return nltk.word_tokenize(text)
+
+    def preprocess(self, tokens):
+        return list(nltk.lm.preprocessing.pad_both_ends(tokens, n=self.ngrams_num))
+
+    def ppl(self, text):
+        return self.model.perplexity([self.preprocess(text)])
