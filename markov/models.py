@@ -128,7 +128,7 @@ class LM:
         Given an n-gram generate the following gram.
         :param history: A string or word list.
         :param greedy: If true, returns greedily the next most probable next gram.
-        :param n: Number of grams to return. Only works with "greedy" and default is 1.
+        :param n: Number of grams to return (1 by default).
         :return: The next gram
         """
         ngram = history[-self.n:]
@@ -136,15 +136,28 @@ class LM:
         x = random.random()
         # UNCHECKED
         if greedy:
-            return self.get_next_grams(ngram)[:n]
+            if n==1:
+                return self.get_next_grams(ngram)[0][0]
+            else:
+                return self.get_next_grams(ngram)[:n]
         # For each following gram, sort based on freq,
         # and return the most likely gram to follow.
-        for c, v in self.get_next_grams(ngram):
-            x = x - v
-            # If 'random number' - 'gram freq' is below 0
-            # return the gram (high-freq gram property).
-            if x <= 0:
-                return c
+
+        # If 'random number' - 'gram freq' is below 0
+        # return the gram (high-freq gram property).
+        if n == 1:
+            for c, v in self.get_next_grams(ngram):
+                x = x - v
+                if x <= 0:
+                    return c
+        else:
+            outputs = []
+            for c, v in self.get_next_grams(ngram):
+                x = x - v
+                if x <= 0:
+                    outputs.append((c,v))
+                    if len(outputs) == n:
+                        return outputs
 
     def generate_text(self, grams_num=1000):
         """
