@@ -5,6 +5,8 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, GRU, Embedding
+import pickle
+from tensorflow.keras.models import load_model
 
 
 def get_plato_rnn():
@@ -13,6 +15,15 @@ def get_plato_rnn():
     plato = urlopen("http://www.gutenberg.org/cache/epub/1497/pg1497.txt").read().decode("utf8")
     rnn_lm.train(plato[:10000])
     return rnn_lm
+
+
+def load(model_path="rnn"):
+    rnn = RNN()
+    rnn.model = load_model(model_path+".h5")
+    rnn.tokenizer = pickle.load(open(model_path+".tkn", "rb"))
+    rnn.set_up_indices()
+    return rnn
+
 
 class RNN:
     """
@@ -37,6 +48,7 @@ class RNN:
         self.early_stop = EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
         self.tokenizer = None
         self.i2w = None
+        self.w2i = None
 
     def build(self):
         self.model = Sequential()
@@ -54,10 +66,14 @@ class RNN:
         self.build()
         self.model.fit(x, y, validation_split=self.split, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
 
+    def set_up_indices(self):
+        self.i2w = {index: word for word, index in self.tokenizer.word_index.items()}
+        self.w2i = {word: index for word, index in self.tokenizer.word_index.items()}
+
     def text_to_sequences(self, text):
         self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token="oov", lower=False)
         self.tokenizer.fit_on_texts([text])
-        self.i2w = {index: word for word, index in self.tokenizer.word_index.items()}
+        self.set_up_indices()
         print('Vocabulary Size: %d' % self.vocab_size)
         encoded = self.tokenizer.texts_to_sequences([text])[0]
         sequences = list()
@@ -135,7 +151,6 @@ class RNN:
         #print(f"`{next_word}' was returned; the right word ({self.i2w[target]}) was found at index: {sorted(word_probs).index(p)}")
         #return np.mean(errors)
 
-
     def cross_entropy(self, text, PPL=False):
         """
         Cross Entropy of the observed grams. To get the Perplexity (PPL) compute:
@@ -151,6 +166,11 @@ class RNN:
         log_probs = list(map(np.log2, probs))
         ce = -np.mean(log_probs)
         return np.power(2, ce) if PPL else ce
+
+    def save(self, name="rnn"):
+        self.model.save(f"{name}.h5")
+        with open(f"{name}.tkn", "wb") as o:
+            pickle.dump(self.tokenizer, o)
 
     def accuracy(self, text, unwanted_term="xxxx", oov="oov", lexicon={}, relative_kd=True):
         """
@@ -177,7 +197,7 @@ class RNN:
                 keystrokes_discounted += len(target_word)
                 continue
             context_encoded = encoded[i-history:i]
-            predicted = np.argmax(self.model.predict([context_encoded], verbose=0), axis=-1)
+            predicted = np.argmax(self.model.predict([context_encoded], verbose=0), axis=-1)[0]
             if target == predicted:
                 scores.append(1)
                 keystrokes += len(target_word)

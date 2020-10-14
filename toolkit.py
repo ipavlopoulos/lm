@@ -87,3 +87,58 @@ def accuracy(words, lm, lexicon={}, relative_kd=True):
             strokes_discounted += len(gold_word)
             strokes += len(gold_word)
     return np.mean(results), 1-(strokes_discounted/strokes) if relative_kd else (strokes_discounted, strokes)
+
+
+def precision_recall(words, lm, lexicon):
+    tp, fp, tn, fn = 0, 0, 0, 0
+    for i in range(lm.n, len(words)):
+        gold_word = words[i]
+        history = words[i - lm.n:i]
+        pred_word = lm.generate_next_gram(history)
+        if pred_word in lexicon:
+            if gold_word == pred_word:
+                tp += 1
+            else:  # predicted word incorrect but within the lexicon
+                fp += 1
+        else:
+            if gold_word in lexicon:  # gold word in lexicon but not predicted
+                fn += 1
+            else:  # neither the gold nor the predicted word are in the lexicon
+                pass  # or: tn += 1
+    return tp/(tp+fp), tp/(tp+fn)
+
+
+def precision_recall(rnn, words, lexicon):
+    """
+    Precision and Recall of the language model, using the lexicon.
+    :param rnn: an LSTM or GRU RNN model
+    :param words:
+    :param lexicon:
+    :return:
+    """
+    encoded = rnn.tokenizer.texts_to_sequences([" ".join(words)])[0]
+    history = 2 * rnn.window - 1
+    tp, fp, fn, tn = 0, 0, 0, 0
+    reference, inputs = [], []
+    for i in range(history, len(encoded)):
+        target = encoded[i]
+        gold_word = rnn.i2w[target]
+        reference.append(gold_word)
+        context_encoded = encoded[i-history:i]
+        inputs.append(context_encoded)
+    prediction_scores = rnn.model.predict(inputs, verbose=0)
+    pred_indices = np.argmax(prediction_scores, axis=1)
+    predictions = [rnn.i2w[pred_index] for pred_index in pred_indices]
+    print (predictions)
+    for pred_word, gold_word in tqdm(zip(reference, predictions)):
+        if pred_word in lexicon:
+            if gold_word == pred_word:
+                tp += 1
+            else:  # predicted word incorrect but within the lexicon
+                fp += 1
+        else:
+            if gold_word in lexicon:  # gold word in lexicon but not predicted
+                fn += 1
+            else:  # neither the gold nor the predicted word are in the lexicon
+                pass  # or: tn += 1
+    return tp / (tp + fp), tp / (tp + fn)

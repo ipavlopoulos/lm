@@ -38,9 +38,10 @@ flags.DEFINE_integer("repetitions", 5, "Number of repetitions for Monte Carlo Cr
 flags.DEFINE_integer("epochs", 100, "Number of epochs for neural language modeling.")
 flags.DEFINE_integer("min_word_freq", 10, "Any words with frequency less than that are masked and ignored.")
 flags.DEFINE_integer("max_chars", 10000, "Use only texts with less characters than this number.")
+flags.DEFINE_integer("step", 1, "Valid only when a lexicon is given or inferred (explore_vocab_sensitivity>0).")
 flags.DEFINE_integer("save_datasets", 0, "Whether to save the datasets (1), sampled but not pre-processed.")
 flags.DEFINE_integer("load_datasets", 0, "Whether to load saved  datasets.")
-
+flags.DEFINE_string("lexicon_path", "", "The path to a CSV lexicon, with a column 'term' incl. the terms.")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -57,7 +58,7 @@ def parse_data(dataset):
     """
     Parse the dataset.
     :param dataset: The dataset name, iuxray or mimic.
-    :return: The datadrame with the data.
+    :return: The datadrame with the DATA.
     """
     assert dataset in {IUXRAY, MIMIC}
     if dataset == IUXRAY:
@@ -81,7 +82,7 @@ def parse_data(dataset):
     data = data.dropna(subset=["TEXT"])
     # Keep it fair among datasets, so keep the smallest
     if FLAGS.dataset_size < data.shape[0]:
-        print(f"Reducing the data, which originally had {data.shape[0]} texts included.")
+        print(f"Reducing the DATA, which originally had {data.shape[0]} texts included.")
         data = data.sample(FLAGS.dataset_size, random_state=42)
         print(f"New dataset size: {data.shape[0]}")
     if FLAGS.preprocess == 1:
@@ -89,15 +90,19 @@ def parse_data(dataset):
         data.TEXT = data.TEXT.apply(preprocess)
     data["WORDS"] = data.TEXT.str.split()
     if FLAGS.save_datasets == 1:
-        print("Saving the data...")
+        print("Saving the DATA...")
         data.to_csv(f"{dataset}.{FLAGS.report_type[:5].lower()}.csv", index=False)
     return data
 
 
-def vocab_size_sensitivity(train_words, test_words, lm, step=150):
-    vocabulary = Counter(train_words)
+def vocab_size_sensitivity(train_words, test_words, lm, step=150, lexicon=None):
+    if lexicon is None:
+        vocabulary = Counter(train_words)
+    else:
+        vocabulary = Counter([w for w in train_words if w in lexicon])
+
     results = {"V": [], "Accuracy": [], "KD": [], "K": []}
-    for f in range(50, FLAGS.vocab_size, step):
+    for f in range(step, FLAGS.vocab_size, step):
         results["V"].append(f)
         lexicon, _ = zip(*vocabulary.most_common(f))
         acc, (kd, keystrokes) = accuracy(words=test_words, lm=lm, lexicon=set(lexicon), relative_kd=False) \
@@ -110,9 +115,29 @@ def vocab_size_sensitivity(train_words, test_words, lm, step=150):
     return results_pd
 
 
+def pr(train_words, test_words, lm, max_size=100, step=1, lexicon=None):
+    if lexicon is None:
+        vocabulary = Counter(train_words)
+    else:
+        vocabulary = Counter([w for w in train_words if w in lexicon])
+
+    results = {"V": [], "P": [], "R": []}
+    for f in range(2, max_size, step):
+        results["V"].append(f)
+        lexicon, _ = zip(*vocabulary.most_common(f))
+        if "gram" in lm.name:
+            p, r = precision_recall(words=test_words, lm=lm, lexicon=set(lexicon))
+        else:
+            p, r = lm.precision_recall(words=test_words, lexicon=set(lexicon))
+        results[f"P"].append(p)
+        results[f"R"].append(r)
+    results_pd = pd.DataFrame(results)
+    return results_pd
+
+
 def main(argv):
 
-    # load the data
+    # load the DATA
     if FLAGS.load_datasets:
         data = load_data(FLAGS.dataset_name)
     else:
@@ -134,7 +159,7 @@ def main(argv):
     # count words and tokens
     # info: perhaps also mask rare words to assist training - to be disregarded during testing
 
-    # create the MC sampled data sets
+    # create the MC sampled DATA sets
     datasets = []
     for i in range(FLAGS.repetitions):
         train_test = data.sample(FLAGS.dataset_size, random_state=42+i).WORDS.sum()
@@ -178,15 +203,24 @@ def main(argv):
         print(f"Keystrokes:{np.mean(keystrokes)} ± {sem(keystrokes)}")
 
     if FLAGS.explore_vocab_sensitivity != 0:
-        print("Exploring different Vocabulary sizes...")
         train_words, test_words = datasets[-1]
         if FLAGS.explore_vocab_sensitivity == 1:
             lm = markov_models.LM(gram=markov_models.WORD, n=3).train(train_words)
         elif FLAGS.explore_vocab_sensitivity == 2:
             lm = neural_models.RNN(epochs=FLAGS.epochs, vocab_size=FLAGS.vocab_size, use_gru=int(FLAGS.method == "gru"))
             lm.train(train_words)
+            lm.save()
 
-        _ = vocab_size_sensitivity(train_words, test_words, lm)
+        if len(FLAGS.lexicon_path) > 0:
+            print("Exploring P/R of the given lexicon...")
+            lexicon = pd.read_csv(FLAGS.lexicon_path).term.to_list()
+            results_pd = pr(train_words, test_words, lm=lm, step=FLAGS.step, max_size=FLAGS.vocab_size, lexicon=set(lexicon))
+
+            results_pd.to_csv(f"{FLAGS.dataset_name}.{lm.name}.{'stop' if 'stop' in FLAGS.lexicon_path else 'medical'}.csv", index=False)
+            results_pd.plot()
+        else:
+            print("Exploring different Vocabulary sizes...")
+            _ = vocab_size_sensitivity(train_words, test_words, lm)
 
 
 if __name__ == "__main__":
