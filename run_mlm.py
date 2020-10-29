@@ -29,7 +29,7 @@ flags.DEFINE_string("report_type", "Radiology", "Valid only for MIMIC-III. Examp
 flags.DEFINE_integer("test_size", 10000, "Number of words to test.")
 flags.DEFINE_integer("vocab_size", 1000, "The size of the vocabulary; rare words are discarded.")
 flags.DEFINE_integer("preprocess", 1, "Whether to use pre-processing or not.")
-flags.DEFINE_string("dataset_name", "iuxray", "The dataset: iuxray/mimic")
+flags.DEFINE_string("dataset", "iuxray", "The dataset: iuxray/mimic. Alternatively, give a path.")
 flags.DEFINE_integer("dataset_size", 2928, "The size of the dataset. Default is the small size of iuxray. Assign a "
                                            "large integer to have it in full (e.g., 1000000).")
 flags.DEFINE_string("method", "explore", "One of lstm/gru/counts/explore.")
@@ -62,7 +62,7 @@ def parse_data(dataset):
     :param dataset: The dataset name, iuxray or mimic.
     :return: The datadrame with the DATA.
     """
-    assert dataset in {IUXRAY, MIMIC}
+    assert dataset.endswith(".csv") or dataset in {IUXRAY, MIMIC}
     if dataset == IUXRAY:
         data = pd.read_csv(f"./DATA/iuxray.csv.gz")
         data["TEXT"] = data.indication + data.comparison + data.findings + data.impression
@@ -115,7 +115,7 @@ def vocab_size_sensitivity(train_words, test_words, lm, step=150, lexicon=None):
         results[f"KD"].append(kd)
         results[f"K"].append(keystrokes)
     results_pd = pd.DataFrame(results)
-    results_pd.to_csv(f"{FLAGS.dataset_name}.{lm.name}.vocabulary_study.csv", index=False)
+    results_pd.to_csv(f"{FLAGS.dataset}.{lm.name}.vocabulary_study.csv", index=False)
     return results_pd
 
 
@@ -157,9 +157,9 @@ def main(argv):
 
     # load the DATA
     if FLAGS.load_datasets:
-        data = load_data(FLAGS.dataset_name)
+        data = load_data(FLAGS.dataset)
     else:
-        data = parse_data(FLAGS.dataset_name)
+        data = parse_data(FLAGS.dataset)
 
     print("Data loaded...")
 
