@@ -199,7 +199,7 @@ def main(argv):
 
     if FLAGS.method == "counts":
         print(f"Evaluating N-Grams on {FLAGS.test_size} unseen words...")
-        kappas = range(1, 9)
+        kappas = range(2, 5)
         accs = {k: [] for k in kappas}
         keys = {k: [] for k in kappas}
         for train_words, test_words in datasets:
@@ -240,7 +240,6 @@ def main(argv):
             print("Exploring P/R of the given lexicons...")
             stop_lexicon = set(pd.read_csv(FLAGS.stop_lexicon_path).term.to_list())
             meds_lexicon = set(pd.read_csv(FLAGS.meds_lexicon_path).term.to_list())
-
             results_pd = pr(train_words, test_words, lm=lm, stopwords=stop_lexicon, medwords=meds_lexicon)
         else:
             print("Exploring different Vocabulary sizes...")
