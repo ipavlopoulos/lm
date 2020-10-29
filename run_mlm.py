@@ -56,6 +56,19 @@ def load_data(name):
     return data
 
 
+def mimic_handler(data):
+    data = data[data.CATEGORY == FLAGS.report_type]
+    data = data[data.TEXT.apply(len) < FLAGS.max_chars]
+    if FLAGS.section_name is not None:
+        # Use only a section per report
+        assert FLAGS.section_name in {"indication", "comparison", "findings", "impression"}
+        sep = f"{FLAGS.section_name.upper()}:"
+        data = data[data.TEXT.str.contains(sep)]
+        data.TEXT = data.TEXT.apply(lambda report: report.split(sep)[1])
+        # todo: this needs improvement, because more than single section will be extracted now
+    return data
+
+
 def parse_data(dataset):
     """
     Parse the dataset.
@@ -70,19 +83,13 @@ def parse_data(dataset):
             # Use only a section from each report
             assert FLAGS.section_name in {"indication", "comparison", "findings", "impression"}
             data.TEXT = data[FLAGS.section_name]
-    elif dataset == MIMIC:
-        data = pd.read_csv("./DATA/NOTEEVENTS.csv.gz")
-        data = data[data.CATEGORY == FLAGS.report_type]
-        data = data[data.TEXT.apply(len) < FLAGS.max_chars]
-        if FLAGS.section_name is not None:
-            # Use only a section from each report
-            assert FLAGS.section_name in {"indication", "comparison", "findings", "impression"}
-            sep = f"{FLAGS.section_name.upper()}:"
-            data = data[data.TEXT.str.contains(sep)]
-            data.TEXT = data.TEXT.apply(lambda report: report.split(sep)[1])
-            # todo: this needs improvement, because more than single section will be extracted now
-    elif "/" in dataset: # path provided to the dataset in CSV format
-        data = pd.read_csv(dataset)
+    else:
+        if dataset == MIMIC:
+            data = pd.read_csv("./DATA/NOTEEVENTS.csv.gz")
+        elif "/" in dataset: # path provided to the dataset in CSV format
+            data = pd.read_csv(dataset)
+        data = mimic_handler(data)
+
     data = data.dropna(subset=["TEXT"])
     # Keep it fair among datasets, so keep the smallest
     if FLAGS.dataset_size < data.shape[0]:
