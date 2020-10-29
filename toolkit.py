@@ -1,5 +1,6 @@
 import numpy as np
 import re
+from tqdm import tqdm
 
 xxxx = "xxxx"
 oov = "oov"
@@ -89,7 +90,14 @@ def accuracy(words, lm, lexicon={}, relative_kd=True):
     return np.mean(results), 1-(strokes_discounted/strokes) if relative_kd else (strokes_discounted, strokes)
 
 
-def precision_recall(words, lm, lexicon):
+def precision_recall(words, lm, lexicon, neural=False):
+    if neural:
+        return precision_recall_rnn(words, lm, lexicon)
+    else:
+        return precision_recall_gram(words, lm, lexicon)
+
+
+def precision_recall_gram(words, lm, lexicon):
     tp, fp, tn, fn = 0, 0, 0, 0
     for i in range(lm.n, len(words)):
         gold_word = words[i]
@@ -108,7 +116,7 @@ def precision_recall(words, lm, lexicon):
     return tp/(tp+fp), tp/(tp+fn)
 
 
-def precision_recall(rnn, words, lexicon):
+def precision_recall_rnn(rnn, words, lexicon):
     """
     Precision and Recall of the language model, using the lexicon.
     :param rnn: an LSTM or GRU RNN model
@@ -129,16 +137,16 @@ def precision_recall(rnn, words, lexicon):
     prediction_scores = rnn.model.predict(inputs, verbose=0)
     pred_indices = np.argmax(prediction_scores, axis=1)
     predictions = [rnn.i2w[pred_index] for pred_index in pred_indices]
-    print (predictions)
-    for pred_word, gold_word in tqdm(zip(reference, predictions)):
+    for gold_word, pred_word in tqdm(zip(reference, predictions)):
         if pred_word in lexicon:
             if gold_word == pred_word:
                 tp += 1
             else:  # predicted word incorrect but within the lexicon
                 fp += 1
         else:
+            print (pred_word, gold_word)
             if gold_word in lexicon:  # gold word in lexicon but not predicted
                 fn += 1
             else:  # neither the gold nor the predicted word are in the lexicon
                 pass  # or: tn += 1
-    return tp / (tp + fp), tp / (tp + fn)
+    return tp / (tp + fp + 0.001), tp / (tp + fn + 0.001)

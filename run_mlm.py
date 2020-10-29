@@ -19,6 +19,7 @@ from toolkit import *
 from collections import Counter
 from absl import flags, logging, app
 from ast import literal_eval
+import matplotlib.pyplot as plt
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("section_name", None, "Valid only for IUXRay. Focus to a single section of the report. Examples:"
@@ -41,7 +42,8 @@ flags.DEFINE_integer("max_chars", 10000, "Use only texts with less characters th
 flags.DEFINE_integer("step", 1, "Valid only when a lexicon is given or inferred (explore_vocab_sensitivity>0).")
 flags.DEFINE_integer("save_datasets", 0, "Whether to save the datasets (1), sampled but not pre-processed.")
 flags.DEFINE_integer("load_datasets", 0, "Whether to load saved  datasets.")
-flags.DEFINE_string("lexicon_path", "", "The path to a CSV lexicon, with a column 'term' incl. the terms.")
+flags.DEFINE_string("stop_lexicon_path", "", "The path to a CSV lexicon of stopwords, with a column 'term' incl. the terms.")
+flags.DEFINE_string("meds_lexicon_path", "", "The path to a CSV lexicon of health-related terms, with a column 'term' incl. the terms.")
 
 IUXRAY = "iuxray"
 MIMIC = "mimic"
@@ -115,23 +117,37 @@ def vocab_size_sensitivity(train_words, test_words, lm, step=150, lexicon=None):
     return results_pd
 
 
-def pr(train_words, test_words, lm, max_size=100, step=1, lexicon=None):
-    if lexicon is None:
-        vocabulary = Counter(train_words)
-    else:
-        vocabulary = Counter([w for w in train_words if w in lexicon])
-
-    results = {"V": [], "P": [], "R": []}
-    for f in range(2, max_size, step):
-        results["V"].append(f)
-        lexicon, _ = zip(*vocabulary.most_common(f))
-        if "gram" in lm.name:
-            p, r = precision_recall(words=test_words, lm=lm, lexicon=set(lexicon))
-        else:
-            p, r = lm.precision_recall(words=test_words, lexicon=set(lexicon))
-        results[f"P"].append(p)
-        results[f"R"].append(r)
+def pr(train_words, test_words, lm, stopwords, medwords, steps=list(range(2, 10, 2))):
+    # adapt the lexicon to the dataset
+    v_stop = Counter([w for w in train_words if w in stopwords])
+    v_meds = Counter([w for w in train_words if w in medwords])
+    meds = "medical"
+    stop = "stop"
+    results = {"v": [], f"P@{stop}": [], f"R@{stop}": [], f"P@{meds}":[], f"R@{stop}":[]}
+    for step in steps:
+        results["v"].append(step)
+        # get the most commonly used words of the lexicon
+        lex_stop, _ = zip(*v_stop.most_common(step))
+        lex_meds, _ = zip(*v_meds.most_common(step))
+        p_stop, r_stop = precision_recall(words=test_words, lm=lm, lexicon=set(lex_stop), neural="gram" not in lm.name)
+        results[f"P@{stop}"].append(p_stop)
+        results[f"R@{stop}"].append(r_stop)
+        p_meds, r_meds = precision_recall(words=test_words, lm=lm, lexicon=set(lex_meds), neural="gram" not in lm.name)
+        results[f"P@{meds}"].append(p_meds)
+        results[f"R@{meds}"].append(r_meds)
     results_pd = pd.DataFrame(results)
+
+    _ = plt.figure(figsize=(8, 4), dpi=300)
+    plt.plot(results_pd.v, results_pd[f"P@{stop}"], 'b:', label=f"P@{stop}")
+    plt.plot(results_pd.v, results_pd[f"P@{meds}"], 'b', label=f"P@{meds}")
+    #plt.fill_between(results_pd.v, results_pd["P@stop"], results_pd["P@meds"], color='b', alpha='0.1')
+    plt.plot(results_pd.v, results_pd[f"R@{stop}"], 'r:', label=f"R@{stop}")
+    plt.plot(results_pd.v, results_pd[f"R@{meds}"], 'r', label=f"R@{meds}")
+    #plt.fill_between(results_pd.v, results_pd["R@stop"], results_pd["R@meds"], color='r', alpha='0.1')
+    plt.ylim([0, 1])
+    plt.xlabel("# top terms assessed")
+    plt.legend()
+    plt.savefig("pr.medsVstop.png")
     return results_pd
 
 
@@ -211,13 +227,12 @@ def main(argv):
             lm.train(train_words)
             lm.save()
 
-        if len(FLAGS.lexicon_path) > 0:
-            print("Exploring P/R of the given lexicon...")
-            lexicon = pd.read_csv(FLAGS.lexicon_path).term.to_list()
-            results_pd = pr(train_words, test_words, lm=lm, step=FLAGS.step, max_size=FLAGS.vocab_size, lexicon=set(lexicon))
+        if len(FLAGS.stop_lexicon_path) > 0 and len(FLAGS.meds_lexicon_path) > 0:
+            print("Exploring P/R of the given lexicons...")
+            stop_lexicon = set(pd.read_csv(FLAGS.stop_lexicon_path).term.to_list())
+            meds_lexicon = set(pd.read_csv(FLAGS.meds_lexicon_path).term.to_list())
 
-            results_pd.to_csv(f"{FLAGS.dataset_name}.{lm.name}.{'stop' if 'stop' in FLAGS.lexicon_path else 'medical'}.csv", index=False)
-            results_pd.plot()
+            results_pd = pr(train_words, test_words, lm=lm, stopwords=stop_lexicon, medwords=meds_lexicon)
         else:
             print("Exploring different Vocabulary sizes...")
             _ = vocab_size_sensitivity(train_words, test_words, lm)
