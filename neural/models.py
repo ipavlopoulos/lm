@@ -73,18 +73,29 @@ class RNN:
         y = to_categorical(y, num_classes=self.vocab_size)
         return X, y
 
-    def generate_next_gram(self, history):
+    def generate_next_gram(self, history, top_n=1):
+        """
+        Return the next gram (character/word) given a preceding text.
+        When top_n>1, more suggestions are returned.
+        :param history: the text preceding the suggestion
+        :param top_n: the number of words to suggest
+        :return: list of suggested words (leftmost being the best) - single word when top_n=1
+        """
         # encode the text using their UIDs
         encoded = self.tokenizer.texts_to_sequences([history])[0]
         context_encoded = np.array([encoded[- 2 * self.window + 1:]])
         # predict a word from the vocabulary
         if context_encoded.ndim == 1:
             context_encoded = np.array([context_encoded])
-        predicted_index = self.model.predict_classes(context_encoded, verbose=0)
-        # todo: change the above to the suggested np.argmax(model.predict(x), axis=-1)
+        # commenting the following line, because "predict" & np.argsort work better
+        #predicted_index = self.model.predict_classes(context_encoded, verbose=0)
+        word_scores = self.model.predict(context_encoded)[0]
+        top_indices = word_scores.argsort()[-top_n:][::-1]
         # map predicted word index to word
-        next_word = self.i2w[predicted_index[0]]
-        return next_word
+        if top_n == 1:
+            return self.i2w[top_indices[0]]
+        return [self.i2w[i] for i in top_indices]
+
 
     # generate a sequence from the model
     def generate_seq(self, seed_text, n_words):
