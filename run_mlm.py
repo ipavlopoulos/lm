@@ -81,6 +81,8 @@ def parse_data(dataset):
             data = data[data.TEXT.str.contains(sep)]
             data.TEXT = data.TEXT.apply(lambda report: report.split(sep)[1])
             # todo: this needs improvement, because more than single section will be extracted now
+    elif "/" in dataset: # path provided to the dataset in CSV format
+        data = pd.read_csv(dataset)
     data = data.dropna(subset=["TEXT"])
     # Keep it fair among datasets, so keep the smallest
     if FLAGS.dataset_size < data.shape[0]:
