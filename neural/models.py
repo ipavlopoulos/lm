@@ -76,15 +76,16 @@ class RNN:
         self.set_up_indices()
         print('Vocabulary Size: %d' % self.vocab_size)
         encoded = self.tokenizer.texts_to_sequences([text])[0]
-        sequences = list()
+        windows = list(range(self.window, len(encoded) - self.window))
+        sequences = np.array([np.zeros(self.window * 2) for _ in windows])
         # create equally-sized windows
-        for i in range(self.window, min(self.max_steps, len(encoded) - self.window)):
-            sequence = encoded[i - self.window:i + self.window]
-            sequences.append(np.array(sequence))
+        for i, w in enumerate(windows):
+            sequences[i] = np.array(encoded[w - self.window: w + self.window])
         print('Total Sequences: %d' % len(sequences))
-        sequences = np.array(sequences)
         # let the last token from each window be the target
-        X, y = sequences[:,:-1], sequences[:,-1]
+        X = sequences[:,:-1]
+        y = sequences[:,-1]
+        del encoded, sequences
         # turn y to onehot
         y = to_categorical(y, num_classes=self.vocab_size)
         return X, y
