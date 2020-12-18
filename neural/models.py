@@ -7,6 +7,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, GRU, Embedding
 import pickle
 from tensorflow.keras.models import load_model
+from transformers import GPT2Tokenizer, TFGPT2LMHeadModel
 
 
 def get_plato_rnn():
@@ -23,6 +24,19 @@ def load(model_path="rnn"):
     rnn.tokenizer = pickle.load(open(model_path+".tkn", "rb"))
     rnn.set_up_indices()
     return rnn
+
+
+class GPT2:
+
+    def __init__(self):
+        self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        self.model = TFGPT2LMHeadModel.from_pretrained('gpt2', pad_token_id=self.tokenizer.eos_token_id)
+
+    def generate_next_gram(self, context=""):
+        input_ids = self.tokenizer.encode(context, return_tensors='tf')
+        output_ids = self.model.generate(input_ids, max_length=len(input_ids[0]) + 1)
+        word = self.tokenizer.decode(output_ids[0][-1], skip_special_tokens=True)
+        return word.strip()
 
 
 class RNN:
