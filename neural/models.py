@@ -59,7 +59,7 @@ class RNN:
         self.stacks = stacks
         self.vocab_size = vocab_size
         self.split = split
-        self.early_stop = EarlyStopping(monitor=monitor, mode=mode, patience=patience, restore_best_weights=True)
+        self.early_stop = EarlyStopping(monitor=monitor, mode=mode, min_delta=0, patience=patience, restore_best_weights=True)
         self.tokenizer = None
         self.i2w = None
         self.w2i = None
