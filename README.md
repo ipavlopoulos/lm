@@ -25,7 +25,7 @@ Language Modelling (LM) modules.
 ```
 
 ### Neural
-* Uses an RNN to generate the next word.
+* Uses an RNN, GRU or LSTM, to generate the next word.
 ```python
 >>> from neural.models import RNN
 >>> rnn = RNN(epochs=1)
@@ -36,3 +36,4 @@ Language Modelling (LM) modules.
 >>> rnn.train(data)
 >>> rnn.cross_entropy("Jack fell down and broke his crown\n")
 ```
+* You can find a better example in the `nlm_example` [notebook](https://github.com/ipavlopoulos/lm/blob/master/nlm_example.ipynb).
