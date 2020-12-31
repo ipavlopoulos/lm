@@ -47,9 +47,10 @@ class RNN:
     rnn_lm.train(plato)
     """
     def __init__(self, stacks=0, split=0.1, vocab_size=10000, batch_size=128, epochs=100, patience=3, hidden_size=50,
-                 window=3, max_steps=10000000, use_gru=False, monitor="val_loss", mode="min", lower=True):
+                 window=3, max_steps=10000000, use_gru=False, monitor="val_loss", mode="min", lower=True, oov=None):
         self.batch_size = batch_size
         self.epochs = epochs
+        self.oov = oov
         self.lower = lower
         self.hidden_size = hidden_size
         self.output_mlp_size = 100
@@ -86,7 +87,7 @@ class RNN:
         self.w2i = {word: index for word, index in self.tokenizer.word_index.items()}
 
     def text_to_sequences(self, text):
-        self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token="oov", lower=self.lower)
+        self.tokenizer = Tokenizer(num_words=self.vocab_size, filters="", oov_token=self.oov, lower=self.lower)
         self.tokenizer.fit_on_texts([text])
         self.set_up_indices()
         print('Vocabulary Size: %d' % self.vocab_size)
