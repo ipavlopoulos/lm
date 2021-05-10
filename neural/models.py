@@ -32,11 +32,11 @@ class GPT2:
         self.tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
         self.model = TFGPT2LMHeadModel.from_pretrained('gpt2', pad_token_id=self.tokenizer.eos_token_id)
 
-    def generate_next_gram(self, context=""):
+    def generate_next_gram(self, context="", N=3):
         input_ids = self.tokenizer.encode(context, return_tensors='tf')
-        output_ids = self.model.generate(input_ids, max_length=len(input_ids[0]) + 1)
-        word = self.tokenizer.decode(output_ids[0][-1], skip_special_tokens=True)
-        return word.strip()
+        output_ids = self.model.generate(input_ids, do_sample=True, num_return_sequences=N, max_length=len(input_ids[0]) + 1)
+        words = [self.tokenizer.decode(w[-1], skip_special_tokens=True).strip() for w in output_ids]
+        return words
 
 
 class RNN:
