@@ -37,3 +37,15 @@ Language Modelling (LM) modules.
 >>> rnn.cross_entropy("Jack fell down and broke his crown\n")
 ```
 * You can find a better example in the `nlm_example` [notebook](https://github.com/ipavlopoulos/lm/blob/master/nlm_example.ipynb).
+
+If you find this work useful, please cite the following work:
+```
+@inproceedings{pavlopoulos2021customized,
+  title={Customized Neural Predictive Medical Text: A Use-Case on Caregivers},
+  author={Pavlopoulos, John and Papapetrou, Panagiotis},
+  booktitle={Artificial Intelligence in Medicine: 19th International Conference on Artificial Intelligence in Medicine, AIME 2021, Virtual Event, June 15--18, 2021, Proceedings},
+  pages={438--443},
+  year={2021},
+  organization={Springer}
+}
+```
