@@ -181,8 +181,20 @@ class LM:
         sep = " " if self.gram == WORD else ""
         return sep.join(out)
 
-    def cross_entropy(self, text):
+    def bpc(self, text):
         """
+        Bits Per Character
+        The negative log probabilities of characters (words) averaged across the sequence 
+        Perplexity (PPL) can be computed as: np.power(2, self.bpc(text))
+        :param text: The text to compute the BPC for
+        :return: A float number, the lower the better
+        """
+        probs = self.compute_gram_probs(text)
+        log_probs = list(map(np.log2, probs))
+        return -np.mean(log_probs)
+    
+    def cross_entropy(self, text):
+        """ DEPRECATED
         Cross Entropy (aka Bits Per Character or BPC for characters).
         This is the negative mean log prob of the words/characters.
         To get the Perplexity (PPL) compute: np.power(2, self.cross_entropy(text)).
