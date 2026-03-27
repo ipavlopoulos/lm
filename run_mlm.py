@@ -132,16 +132,16 @@ def pr(train_words, test_words, lm, stopwords, medwords, steps=list(range(2, 10,
     v_meds = Counter([w for w in train_words if w in medwords])
     meds = "medical"
     stop = "stop"
-    results = {"v": [], f"P@{stop}": [], f"R@{stop}": [], f"P@{meds}":[], f"R@{stop}":[]}
+    results = {"v": [], f"P@{stop}": [], f"R@{stop}": [], f"P@{meds}": [], f"R@{meds}": []}
     for step in steps:
         results["v"].append(step)
         # get the most commonly used words of the lexicon
-        lex_stop, _ = zip(*v_stop.most_common(step))
-        lex_meds, _ = zip(*v_meds.most_common(step))
-        p_stop, r_stop = precision_recall(words=test_words, lm=lm, lexicon=set(lex_stop), neural="gram" not in lm.name)
+        lex_stop = {word for word, _ in v_stop.most_common(step)}
+        lex_meds = {word for word, _ in v_meds.most_common(step)}
+        p_stop, r_stop = precision_recall(words=test_words, lm=lm, lexicon=lex_stop, neural="gram" not in lm.name)
         results[f"P@{stop}"].append(p_stop)
         results[f"R@{stop}"].append(r_stop)
-        p_meds, r_meds = precision_recall(words=test_words, lm=lm, lexicon=set(lex_meds), neural="gram" not in lm.name)
+        p_meds, r_meds = precision_recall(words=test_words, lm=lm, lexicon=lex_meds, neural="gram" not in lm.name)
         results[f"P@{meds}"].append(p_meds)
         results[f"R@{meds}"].append(r_meds)
     results_pd = pd.DataFrame(results)

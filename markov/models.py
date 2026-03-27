@@ -113,7 +113,10 @@ class LM:
                     prob = probable_next_grams[next_gram]
             # Append the probability and update history
             probs.append(prob)
-            history = self.stringify(history[-self.n:]) + next_gram
+            if self.gram == WORD:
+                history = history[-self.n:] + [next_gram]
+            else:
+                history = history[-self.n:] + next_gram
         return probs
 
     def get_next_grams(self, ngram):

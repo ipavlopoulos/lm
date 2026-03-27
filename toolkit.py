@@ -92,7 +92,7 @@ def accuracy(words, lm, lexicon={}, relative_kd=True):
 
 def precision_recall(words, lm, lexicon, neural=False):
     if neural:
-        return precision_recall_rnn(words, lm, lexicon)
+        return precision_recall_rnn(lm, words, lexicon)
     else:
         return precision_recall_gram(words, lm, lexicon)
 
@@ -113,7 +113,9 @@ def precision_recall_gram(words, lm, lexicon):
                 fn += 1
             else:  # neither the gold nor the predicted word are in the lexicon
                 pass  # or: tn += 1
-    return tp/(tp+fp), tp/(tp+fn)
+    precision = tp / (tp + fp + 0.001)
+    recall = tp / (tp + fn + 0.001)
+    return precision, recall
 
 
 def precision_recall_rnn(rnn, words, lexicon):

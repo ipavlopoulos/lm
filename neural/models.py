@@ -84,7 +84,8 @@ class RNN:
         self.model.fit(x, y, validation_split=self.split, batch_size=self.batch_size, epochs=self.epochs, callbacks=[self.early_stop])
 
     def set_up_indices(self):
-        self.i2w = {index: word for word, index in self.tokenizer.word_index.items()}
+        self.i2w = {0: self.oov}
+        self.i2w.update({index: word for word, index in self.tokenizer.word_index.items()})
         self.w2i = {word: index for word, index in self.tokenizer.word_index.items()}
 
     def text_to_sequences(self, text):
@@ -123,12 +124,12 @@ class RNN:
             context_encoded = np.array([context_encoded])
         # commenting the following line, because "predict" & np.argsort work better
         #predicted_index = self.model.predict_classes(context_encoded, verbose=0)
-        word_scores = self.model.predict(context_encoded)[0]
+        word_scores = self.model.predict(context_encoded, verbose=0)[0]
         top_indices = word_scores.argsort()[-top_n:][::-1]
         # map predicted word index to word
         if top_n == 1:
-            return self.i2w[top_indices[0]]
-        return [self.i2w[i] for i in top_indices]
+            return self.i2w.get(top_indices[0], self.oov)
+        return [self.i2w.get(i, self.oov) for i in top_indices]
 
     # generate a sequence from the model
     def generate_seq(self, seed_text, n_words):
@@ -168,8 +169,9 @@ class RNN:
         encoded = self.tokenizer.texts_to_sequences([text])[0]
         history = 2 * self.window - 1
         context_windows = [encoded[i-history:i] for i in range(history, len(encoded))]
-        predicted_indices = self.model.predict_classes(context_windows, verbose=0)
-        return [None for i in range(history)] + [self.i2w[i] for i in list(predicted_indices)]
+        prediction_scores = self.model.predict(np.array(context_windows), verbose=0)
+        predicted_indices = np.argmax(prediction_scores, axis=1)
+        return [None for i in range(history)] + [self.i2w.get(i, self.oov) for i in list(predicted_indices)]
         # map predicted word index to word
         #generated_words.append(predicted_index)
         #word_probs = self.model.predict(context_encoded, verbose=0)[0]
