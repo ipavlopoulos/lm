@@ -4,7 +4,7 @@ Small research-oriented language modeling code for:
 
 - character-level n-gram language models
 - word-level n-gram language models
-- neural next-word models built with LSTM or GRU
+- neural next-word models built with PyTorch LSTM or GRU
 - evaluation workflows for predictive medical text experiments
 
 This repository is lightweight and practical. It is most useful if you want to train simple language models, compare count-based and neural approaches, or reproduce the predictive-text experiments used in the accompanying medical-text work.
@@ -28,7 +28,7 @@ Supporting utilities live in:
 
 ### 1. Install dependencies
 
-This project was originally developed against older TensorFlow-era dependencies listed in [`requirements.txt`](/Users/iopa3492/vs/lm/requirements.txt).
+This project uses the dependencies listed in [`requirements.txt`](/Users/iopa3492/vs/lm/requirements.txt), including PyTorch for the neural language model.
 
 ```bash
 python -m venv .venv
@@ -36,7 +36,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If you are using a newer Python or TensorFlow stack, some dependency pinning may need adjustment.
+If you are using a newer Python stack, some dependency pinning may still need adjustment.
 
 ### 2. Try the n-gram model
 

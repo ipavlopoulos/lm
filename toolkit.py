@@ -136,7 +136,7 @@ def precision_recall_rnn(rnn, words, lexicon):
         reference.append(gold_word)
         context_encoded = encoded[i-history:i]
         inputs.append(context_encoded)
-    prediction_scores = rnn.model.predict(inputs, verbose=0)
+    prediction_scores = rnn._predict_logits(np.array(inputs, dtype=np.int64))
     pred_indices = np.argmax(prediction_scores, axis=1)
     predictions = [rnn.i2w[pred_index] for pred_index in pred_indices]
     for gold_word, pred_word in tqdm(zip(reference, predictions)):
